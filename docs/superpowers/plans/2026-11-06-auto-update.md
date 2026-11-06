@@ -12,6 +12,8 @@
 - [x] Test then implement separate-process replacement, health receipt and rollback without touching settings/monitor.db.
 - [x] Verify actual staged-process upgrade and rollback using disposable fixture installations; run existing suite and packaged EXE smoke checks.
 - [x] Version package metadata and document behavior.
-- [ ] Publish the update-capable preview and verify source/artifact hashes.
+- [x] Publish the update-capable preview and verify source/artifact hashes.
 
 **Verification:** Release build has zero warnings/errors; all 10 behavioral suites pass (89 recovery checks and 59 release-client checks). The final packaged EXE passes smoke startup and the real separate-process success/rollback fixtures, including unchanged settings/SQLite data and the 24-hour suppression boundary. Independent review's mutex-ownership and staged-payload pairing findings have regression coverage and are fixed. EXE SHA-256: `0ce89ee03bae972aaf6a2e8f0c6453c3402100d9f201c9170385fa9e4a165e1d`.
+
+**Release:** Published [v0.2.0-preview](https://github.com/tvcmall-dev/codex-auto-continue/releases/tag/v0.2.0-preview) from commit `5f6fb4ab4280888c0b37d57130911ad7539b2363`. Uploaded EXE, ZIP and checksum-list asset sizes/digests match local files. The production release client independently selected the public update from 0.1.0-preview, downloaded it and verified its SHA-256, x64 identity and product version against the tested package.

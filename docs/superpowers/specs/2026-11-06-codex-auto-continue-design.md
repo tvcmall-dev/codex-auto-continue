@@ -48,6 +48,7 @@ runtime for production operation.
 | Codex adapter | Backend discovery, JSON-RPC reads/events, and CLI message delivery |
 | Hook relay | Optional short-lived net48 console process that receives hook JSON on stdin |
 | Persistence | SQLite storage for monitoring preferences, pending recovery, and event history |
+| Notifications | Platform-specific webhook payloads, signing, delivery queue, and results |
 
 The desktop application owns the scheduler. Hooks submit small events and exit
 promptly. A relay can forward events over a local named pipe; its input cannot
@@ -155,9 +156,12 @@ It can be configured without changing the conversation's model or permissions.
 
 ## Panel Design
 
-The visual proposal uses a warm light surface, graphite text, restrained green
-and orange accents, and original vector status illustrations. It should feel
-like a focused desktop instrument rather than an administration template.
+The user requests a dark theme. The visual proposal uses deep graphite surfaces,
+layered charcoal panels, subtle borders, bright readable text, restrained green
+and orange accents, and original vector status illustrations. Forms, modal
+dialogs, disabled actions, and every state illustration must match the dark
+palette. It should feel like a focused desktop instrument rather than an
+administration template.
 
 - A narrow left navigation groups sessions, incidents, retry policy, and settings.
 - The main region shows searchable session rows with title, project, status,
@@ -165,6 +169,8 @@ like a focused desktop instrument rather than an administration template.
 - The inspector shows the selected session's larger state illustration,
   current error, retry count, next action, and event timeline.
 - A global monitoring control and connection indicator remain visible.
+- Notification settings include the destination platform, webhook address,
+  optional signing secret, event subscriptions, and an explicit test action.
 - A manual continuation action explains pending confirmation. It is unavailable
   for states such as active execution and waiting for approval.
 - Tray state summarizes running, waiting, and attention counts without opening
@@ -174,6 +180,50 @@ The interactive HTML file is a design artifact only. Its fictional examples
 and simulated recovery must be labeled clearly. Its layouts and vector drawings
 will be translated to WPF XAML after design review; production does not require
 embedding a browser.
+
+## Webhook Notifications
+
+The first version supports one active notification destination at a time, with
+adapters for DingTalk, Feishu, WeCom, and a generic JSON webhook. Separate
+adapters define each platform's message shape, signing scheme, and interpretation
+of delivery success. A generic webhook must not be assumed to accept a
+platform-specific payload.
+
+Settings contain a display name, provider, HTTPS webhook address, enabled state,
+optional signing secret where supported, and event subscriptions. Default events
+are confirmed recoverable failure, confirmed recovery, and retry exhaustion.
+Normal internal retries and repeated reports of the same failure are quiet.
+
+Notification content includes the event, conversation title/ID, state, sanitized
+reason, retry count, and next retry time when applicable. It does not include
+full transcripts, prompts, command output, account credentials, webhook tokens,
+or signing secrets. Messages have a stable Codex Auto Continue title prefix so
+users can configure a provider's keyword-based robot policy if needed.
+
+For DingTalk signing, use the configured secret as the HMAC-SHA256 key and
+`timestamp + "\n" + secret` as UTF-8 input, then Base64 and URL-encode the
+signature. Add timestamp and sign to the request URL as required by the official
+custom-robot API. Parse the platform response as well as the HTTP status:
+DingTalk HTTP 200 with a nonzero `errcode` is a failed notification. Feishu and
+WeCom adapters must be verified against their own current platform contracts.
+
+Use a separate bounded delivery queue. Deduplicate by incident and event type;
+a flapping connection must not produce a notification flood. Delivery has its
+own finite retry budget of three attempts, respects explicit provider rate-limit
+timing, and never blocks conversation recovery. Show final delivery failures
+in notification history without treating them as Codex execution failures.
+
+In the production Windows application, protect the entire webhook URL and its
+secret with Windows DPAPI (`ProtectedData`, `CurrentUser`) before storing them
+under the user's application data directory. Mask them in settings, summaries,
+diagnostics, and exports. Test notifications use an explicit test message and
+show the actual platform result after a user invokes the test action.
+
+The HTML prototype only validates input and simulates a test result. It makes
+no webhook requests, stores entered values only in page memory, and does not
+put secrets in browser storage or files. This limitation is visible in the
+settings panel and test result. Preview screenshots use empty or fictional
+values only.
 
 ## Persistence and Packaging
 
@@ -199,11 +249,30 @@ reset, uncertain message delivery, process restart, and connection loss.
 
 For the preview, verify selection, search, filters, switches, action disabling,
 the queued/confirmation/recovered visual sequence, keyboard access, and usable
-layout at both wide and narrow viewport sizes.
+layout at both wide and narrow viewport sizes. Also verify dark-theme readability,
+provider selection, hidden credential inputs, empty/invalid webhook validation,
+event choices, settings summaries, and the clearly simulated test result.
+
+For production notifications, verify platform payloads and signatures, platform
+failure responses inside HTTP 200, finite retries, incident/event deduplication,
+DPAPI round trips, masked error reporting, and independent monitoring operation
+when a notification cannot be delivered.
 
 For the live adapter, complete the connection acceptance gate before claiming
 support for monitoring or recovering real desktop conversations. Validate one
 explicitly selected conversation before expanding to multiple conversations.
+
+### Preview Verification Record
+
+On 2026-11-06, the dark HTML prototype passed 12 browser interaction checks for
+session selection, filters, search, protected states, monitoring switches, and
+the pending-to-confirmed recovery sequence. It also passed 15 notification
+checks for masked fields, input validation, provider selection, event selection,
+simulated test progress, memory-only saving, sanitized summaries, and absence
+of external webhook requests. The 1440-pixel desktop layout and 430-pixel narrow
+layout were inspected; neither the page nor the settings dialog overflowed
+horizontally. The final page reported no browser console errors. These checks
+validate the prototype only, not the WPF application or live integrations.
 
 ## Official References
 
@@ -211,3 +280,5 @@ explicitly selected conversation before expanding to multiple conversations.
 - https://learn.chatgpt.com/docs/hooks
 - https://learn.chatgpt.com/docs/developer-commands?surface=cli
 - https://developers.openai.com/plugins/build/plugins
+- https://open.dingtalk.com/document/dingstart/customize-robot-security-settings
+- https://open.dingtalk.com/document/development/custom-robots-send-group-messages

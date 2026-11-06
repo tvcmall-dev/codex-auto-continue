@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23213b2d'/%3E%3Cpath d='M6 11h14l-4-4m4 4-4 4M26 21H12l4 4m-4-4 4-4' fill='none' stroke='%239fd0aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <title>Codex 续航 · 界面预览</title>
+  <style>
+    :root{--paper:#f7f8f3;--white:#fffefa;--ink:#263a35;--muted:#74817b;--line:#dfe5dc;--green:#24735e;--green-soft:#e7f1e8;--amber:#96631d;--amber-soft:#fbf0d6;--red:#b4533c;--red-soft:#f8e8e1;--blue:#526e83;--blue-soft:#e9eff2;--shadow:0 20px 60px #243d2a12;--radius:15px;--font:"Bahnschrift","DengXian","Microsoft YaHei",sans-serif}
+    *{box-sizing:border-box}body{margin:0;color:var(--ink);font-family:var(--font);font-size:14px;background:radial-gradient(ellipse at 6% 2%,#dfe8d6 0,transparent 42%),radial-gradient(ellipse at 100% 100%,#e4e9dd 0,transparent 40%),#eff0e9;min-height:100vh;padding:22px}
+    body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.16;background-image:repeating-linear-gradient(90deg,transparent 0 31px,#97a18d18 31px 32px),repeating-linear-gradient(0deg,transparent 0 31px,#97a18d18 31px 32px)}
+    button,input{font:inherit}button{cursor:pointer}button:disabled{cursor:default}button,input{ -webkit-tap-highlight-color:transparent}button{color:inherit}button:focus-visible,input:focus-visible{outline:3px solid #65a88b;outline-offset:3px}button svg{flex-shrink:0}svg{display:block}button{border:0;background:none}.hidden{display:none!important}.sr-only{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+    .app{position:relative;margin:auto;max-width:1600px;height:calc(100vh - 44px);min-height:760px;display:grid;grid-template-rows:64px minmax(0,1fr) 32px;overflow:hidden;border:1px solid #cfd8ca;border-radius:19px;background:var(--paper);box-shadow:var(--shadow);animation:arrive .6s both}
+    .titlebar{display:flex;align-items:center;justify-content:space-between;padding:0 26px;border-bottom:1px solid var(--line);background:#fffefaad}.brand{display:flex;align-items:center;gap:12px}.brand-mark{width:33px;height:33px;padding:5px;color:var(--green);background:#e6eddf;border-radius:10px}.brand-name{font-size:18px;font-weight:650;letter-spacing:.6px}.brand-sub{font-size:10px;letter-spacing:1.8px;color:var(--muted);margin:3px 0 0}.preview-label{display:flex;align-items:center;gap:8px;font-size:12px;padding:7px 11px;border:1px solid #dce3d5;border-radius:7px;color:#5a6e57;background:#f1f4e9}.preview-label:before{content:"";width:6px;height:6px;background:#718e57;border-radius:50%}.platform{font-size:11px;color:var(--muted);letter-spacing:.5px}.titlebar-right{display:flex;align-items:center;gap:18px}
+    .layout{display:grid;grid-template-columns:86px minmax(460px,1fr) 365px;min-height:0}.rail{display:flex;flex-direction:column;align-items:center;border-right:1px solid var(--line);padding:23px 9px 15px;gap:10px;background:#eef1e8}.rail-button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;width:66px;min-height:67px;border:1px solid transparent;border-radius:11px;color:#65736b;font-size:11px;transition:background .15s,color .15s}.rail-button:hover{background:#e2e8dc;color:var(--ink)}.rail-button.active{background:var(--white);border-color:#d9e1d1;color:var(--green);box-shadow:0 3px 8px #53694807}.rail-button.active:before{content:"";position:absolute;left:-10px;width:3px;height:27px;border-radius:0 3px 3px 0;background:var(--green)}.rail-separator{width:28px;height:1px;background:var(--line);margin:10px 0}.rail-bottom{margin-top:auto}.rail-version{font-size:9px;letter-spacing:1px;color:#8c978f;margin-top:14px}.nav-count{position:absolute;right:13px;top:5px;min-width:15px;border:2px solid #eef1e8;border-radius:9px;background:var(--red);color:#fff;font-size:9px;padding:1px 3px}
+    .workspace{min-width:0;min-height:0;padding:25px 27px 19px;display:flex;flex-direction:column;overflow:hidden}.workspace-head{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:23px}.eyebrow{font-size:10px;letter-spacing:2px;color:#7c8d7c;margin:0 0 7px}.workspace h1{font-size:27px;letter-spacing:-.6px;margin:0;font-weight:600}.global-control{display:flex;align-items:center;gap:9px;padding:10px 13px;border-radius:9px;background:var(--green);color:#fffefa;box-shadow:0 4px 11px #24735e16;font-size:12px}.global-control:hover{background:#1b624f}.global-control.paused{background:#ebe9df;color:#5f6254;box-shadow:none}.global-control .control-copy{display:flex;flex-direction:column;align-items:flex-start;gap:2px}.global-control small{font-size:9px;opacity:.74;letter-spacing:1px}
+    .metrics{display:grid;grid-template-columns:1fr 1fr 1fr;flex-shrink:0;margin-bottom:22px;padding:16px 0 17px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.metric{display:flex;align-items:center;gap:13px;min-width:0}.metric+.metric{border-left:1px solid var(--line);padding-left:22px}.metric-number{font-size:32px;font-weight:400;letter-spacing:-1.5px;line-height:1}.metric-label{font-size:11px;color:var(--muted);line-height:1.8}.metric-label strong{display:block;color:#4e6256;font-size:12px;font-weight:500}.metric-number.attention{color:var(--red)}.metric-number.green{color:var(--green)}
+    .list-toolbar{display:flex;justify-content:space-between;align-items:center;gap:13px;margin-bottom:16px}.filters{display:flex;gap:4px;background:#e9ede3;padding:4px;border-radius:9px}.filter{display:flex;align-items:center;gap:7px;white-space:nowrap;padding:7px 10px;border-radius:6px;font-size:11px;color:#71806e}.filter[aria-pressed="true"]{background:var(--white);box-shadow:0 1px 4px #32472e0e;color:var(--ink)}.filter span{font-size:10px;opacity:.7}.search{position:relative;display:flex;align-items:center;gap:8px;flex:1;max-width:213px;padding:9px 10px;border:1px solid #dce3d6;border-radius:8px;background:#fffefa80;color:#899486}.search input{width:100%;min-width:0;border:0;background:none;outline:none;font-size:11px;color:var(--ink)}.search input::placeholder{color:#90998b}.search:focus-within{border-color:#6da58c;box-shadow:0 0 0 2px #6da58c1a}.search input:focus-visible{outline:none}.clear-search{font-size:15px;line-height:1;padding:0 2px;color:#778475}
+    .list-heading{display:flex;align-items:center;justify-content:space-between;font-size:10px;color:#8b9688;padding:0 14px 10px;letter-spacing:.3px}.session-list{display:flex;flex-direction:column;gap:9px;overflow:auto;min-height:0;padding:2px 4px 5px 1px;scrollbar-width:thin;scrollbar-color:#cad4c2 transparent}.session-card{position:relative;flex-shrink:0;border:1px solid #e0e6d9;background:#fffefa99;border-radius:12px;animation:row-in .45s both;animation-delay:var(--delay,0s);transition:border-color .15s,background .15s,box-shadow .15s}.session-card:hover{border-color:#b6c9ad;background:var(--white)}.session-card.selected{border-color:#79a58a;background:#fffefa;box-shadow:0 3px 12px #315f3c09}.session-card.selected:before{content:"";position:absolute;left:-1px;top:22px;bottom:22px;width:3px;border-radius:0 3px 3px 0;background:var(--green)}.session-select{display:grid;grid-template-columns:67px minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 64px 10px 12px;min-height:83px;border-radius:12px}.mini-art{width:64px;height:57px;display:grid;place-items:center;background:var(--tint);border-radius:9px}.mini-art svg{width:63px;height:51px}.session-title{font-size:13px;font-weight:600;letter-spacing:.1px;margin-bottom:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.session-subtitle{font-size:10px;color:#8a9586;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.session-subtitle span+span:before{content:"/";padding:0 7px;color:#b7bfaf}.state-column{text-align:right;min-width:96px}.status-pill{display:inline-flex;align-items:center;justify-content:center;gap:5px;border-radius:5px;padding:5px 7px;color:var(--tone);background:var(--tint);font-size:10px;white-space:nowrap}.status-pill svg{width:11px;height:11px}.row-detail{font-size:9px;color:#8c9687;margin-top:7px;white-space:nowrap}.monitor-switch{position:absolute;right:18px;top:28px;width:29px;height:17px;border-radius:10px;background:#d3dacd;padding:3px;transition:background .2s}.monitor-switch:before{content:"";display:block;width:11px;height:11px;background:#fffefa;border-radius:50%;box-shadow:0 1px 2px #31452b24;transition:transform .2s}.monitor-switch[aria-checked="true"]{background:#6f9676}.monitor-switch[aria-checked="true"]:before{transform:translateX(12px)}.list-note{display:flex;gap:6px;align-items:center;font-size:10px;color:#879580;margin-top:14px;line-height:1.6}.list-note svg{flex-shrink:0}.empty-state{text-align:center;padding:55px 16px;color:#7c8877;border:1px dashed #ccd5c4;border-radius:12px}.empty-state strong{display:block;font-size:16px;color:#566b50;margin-bottom:8px}
+    .inspector{min-width:0;min-height:0;border-left:1px solid var(--line);background:#fbfcf6;display:flex;flex-direction:column;overflow:auto;scrollbar-width:thin;scrollbar-color:#cdd6c6 transparent}.inspector-head{padding:25px 24px 13px;display:flex;justify-content:space-between;align-items:center}.inspector-head span{font-size:10px;color:#899680;letter-spacing:1px}.inspector-head .detail-id{font-size:10px;letter-spacing:1px;color:#9ca58f}.inspector-content{padding:0 24px 22px}.state-hero{position:relative;background:radial-gradient(ellipse at center,var(--tint),transparent 70%);height:150px;display:flex;align-items:center;justify-content:center;margin:0 -4px 12px}.state-hero:after{content:"";position:absolute;left:35px;right:35px;bottom:9px;height:1px;background:linear-gradient(90deg,transparent,#b7c5ad60,transparent)}.state-hero svg{width:211px;height:147px;filter:drop-shadow(0 7px 5px #43522e08)}.hero-caption{position:absolute;left:0;right:0;bottom:0;text-align:center;font-size:8px;letter-spacing:2px;color:#9ca58d}.detail-state{display:flex;justify-content:space-between;align-items:center;margin-bottom:11px}.detail-state .status-pill{padding:5px 8px;font-size:10px}.detail-state small{color:#8b967f;font-size:10px}.inspector h2{font-size:20px;letter-spacing:-.4px;font-weight:600;line-height:1.45;margin:0 0 8px}.detail-description{font-size:11px;color:#778572;line-height:1.8;margin:0 0 17px;min-height:39px}.detail-facts{border:1px solid #e0e7d7;border-radius:10px;background:#f4f7ee;padding:12px 13px;margin-bottom:16px}.fact-row{display:flex;justify-content:space-between;align-items:center;gap:10px;line-height:1.8;font-size:10px}.fact-row+.fact-row{margin-top:6px}.fact-row dt{color:#8a967f}.fact-row dd{margin:0;color:#546b4d;text-align:right}.fact-row .reason-value{color:var(--tone)}.primary-action{width:100%;display:flex;justify-content:center;align-items:center;gap:8px;padding:12px 10px;border-radius:8px;background:var(--green);color:#fffefa;font-size:12px;transition:background .15s}.primary-action:hover{background:#1b624f}.primary-action:disabled{background:#e9ede1;color:#86927b}.primary-action.pending{background:#e9ede1;color:#5d7651}.action-note{text-align:center;font-size:9px;color:#97a08e;line-height:1.7;margin:8px 0 21px}.timeline-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px}.timeline-head h3{font-size:11px;font-weight:600;margin:0}.timeline-head span{font-size:9px;color:#95a08b}.timeline{padding:0;margin:0;list-style:none}.timeline li{position:relative;display:grid;grid-template-columns:43px 1fr;gap:13px;font-size:10px;padding:0 0 14px 0;line-height:1.7}.timeline li:before{content:"";position:absolute;width:5px;height:5px;left:48px;top:5px;background:#b4c3a7;border:3px solid #fbfcf6;border-radius:50%;box-sizing:content-box}.timeline li:after{content:"";position:absolute;left:53px;top:16px;bottom:-1px;width:1px;background:#e0e6d7}.timeline li:last-child:after{display:none}.timeline li:first-child:before{background:var(--tone)}.timeline time{font-size:9px;color:#95a08c;padding-top:1px;font-variant-numeric:tabular-nums}.timeline p{margin:0;color:#77866c;padding-left:12px}.scenario-button{display:flex;justify-content:space-between;align-items:center;width:100%;margin-top:5px;padding:11px 12px;border:1px dashed #ccd8c0;border-radius:8px;font-size:10px;color:#6c805f;background:#f4f7ee}.scenario-button:hover{border-color:#7b9b6b;background:#eef3e5}
+    .statusbar{display:flex;align-items:center;justify-content:space-between;padding:0 19px;background:#edf1e6;border-top:1px solid var(--line);font-size:9px;color:#8a9680;letter-spacing:.2px}.statusbar-left{display:flex;align-items:center;gap:7px}.status-dot{width:5px;height:5px;border-radius:50%;background:#6c9574}.status-dot.paused{background:#b59a5b}.statusbar-right{display:flex;align-items:center;gap:17px}.statusbar kbd{font:inherit;border:1px solid #d5ddce;border-radius:3px;padding:1px 4px;color:#89977f}
+    dialog{border:1px solid #ccd7c2;border-radius:18px;box-shadow:0 25px 100px #23341c33;width:min(650px,calc(100vw - 40px));max-height:85vh;padding:0;background:var(--white);color:var(--ink)}dialog::backdrop{background:#2936224d;backdrop-filter:blur(4px)}.modal-head{padding:23px 25px 18px;display:flex;align-items:flex-start;justify-content:space-between;border-bottom:1px solid var(--line)}.modal-head h2{margin:4px 0 0;font-size:22px;font-weight:600}.modal-head small{font-size:9px;letter-spacing:1.6px;color:#8d9b82}.modal-close{width:30px;height:30px;display:grid;place-items:center;border-radius:8px;background:#eff3e9;color:#788c6a}.modal-close:hover{background:#e4ebdb}.modal-body{padding:23px 25px;overflow:auto;max-height:calc(85vh - 100px)}.modal-intro{margin:0 0 18px;font-size:12px;color:#7b8971;line-height:1.8}.log-item{display:grid;grid-template-columns:34px 1fr;gap:10px;padding:14px 0;border-bottom:1px solid var(--line)}.log-item:last-child{border-bottom:0}.log-icon{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:var(--tint);color:var(--tone)}.log-item h3{font-size:12px;margin:0 0 6px}.log-item p{font-size:11px;line-height:1.7;color:#7b8970;margin:0}.log-item small{display:block;color:#9aa58f;font-size:10px;margin-top:6px}.policy-grid{display:grid;gap:12px}.policy{padding:17px;border:1px solid #dce4d2;border-radius:11px;background:#f7f9f1}.policy h3{font-size:13px;font-weight:600;display:flex;gap:9px;align-items:center;margin:0 0 9px}.policy p{font-size:11px;color:#7e8c72;line-height:1.9;margin:0}.policy strong{color:#516c43;font-weight:500}.policy code{font-size:10px;color:#668254;padding:2px 5px;background:#e8efde;border-radius:4px}.policy-safe{border-color:#ccdcca;background:#eff5eb}.policy-safe h3{color:#3c7252}.scenario-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.scenario-option{display:flex;text-align:left;align-items:center;gap:12px;padding:14px 12px;border:1px solid #e0e6d8;border-radius:10px;background:#fbfcf6}.scenario-option:hover{border-color:#91ad7a;background:#f2f7e9}.scenario-option .mini-art{width:49px;height:43px;flex-shrink:0}.scenario-option .mini-art svg{width:48px;height:38px}.scenario-option strong{font-size:11px;font-weight:500}.scenario-option small{font-size:9px;color:#91a180;display:block;margin-top:5px}.demo-disclaimer{padding:12px 14px;background:#f0f4e8;border-radius:8px;font-size:11px;line-height:1.9;color:#7d8e6d;margin-top:17px}.toast{position:fixed;bottom:52px;left:50%;z-index:5;max-width:calc(100vw - 40px);transform:translate(-50%,15px);padding:12px 18px;border:1px solid #c3d5b6;border-radius:10px;background:#fffef8;box-shadow:0 8px 28px #324a2520;color:#416b32;font-size:12px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}.toast.visible{opacity:1;transform:translate(-50%,0)}
+    .notification-banner{display:flex;gap:11px;align-items:flex-start;padding:13px 14px;margin:0 0 18px;border:1px solid #d9e4cc;border-radius:10px;background:#eef5e6;color:#4f7040;font-size:11px;line-height:1.8}.notification-banner svg{flex-shrink:0;margin-top:3px}.notification-banner strong{font-weight:600}.notification-banner small{display:block;color:#7d906d;font-size:10px}.notification-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid #dde6d2;border-radius:11px;padding:14px;background:#f8faf3;margin-bottom:20px}.notification-summary strong{font-size:12px;font-weight:500;display:block}.notification-summary p{font-size:10px;color:#7a8d6b;margin:6px 0 0;line-height:1.8}.summary-state{font-size:10px;white-space:nowrap;background:#e8efdf;color:#68804f;border-radius:5px;padding:5px 7px}.notification-form{display:grid;gap:17px}.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}.form-field label,.event-options legend{display:block;font-size:11px;color:#526a46;margin-bottom:8px}.form-field input,.form-field select{display:block;width:100%;min-height:39px;border:1px solid #d4dec9;border-radius:8px;background:#fffefa;color:#405c34;padding:10px 11px;font:inherit;font-size:12px}.form-field input::placeholder{color:#9ca78f;font-size:11px}.form-field input[aria-invalid="true"]{border-color:#b75c43;background:#fff9f4}.field-hint{display:block;font-size:10px;color:#8b9a7d;line-height:1.7;margin-top:6px}.field-error{display:block;font-size:10px;color:#aa5039;line-height:1.7;margin-top:5px;min-height:0}.field-error:empty{display:none}.setting-enabled{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.setting-enabled strong{font-size:12px;font-weight:500}.setting-enabled small{display:block;color:#8d9d7d;font-size:10px;margin-top:5px}.setting-switch{width:34px;height:20px;background:#d0d9c5;border-radius:12px;padding:3px;flex-shrink:0}.setting-switch:before{content:"";display:block;width:14px;height:14px;background:#fffefa;border-radius:50%;transition:transform .2s}.setting-switch[aria-checked="true"]{background:#5d8b5f}.setting-switch[aria-checked="true"]:before{transform:translateX(14px)}.event-options{padding:0;margin:0;border:0}.event-options legend{padding:0;margin-bottom:11px}.event-checks{display:flex;flex-wrap:wrap;gap:10px 18px}.event-checks label{display:flex;align-items:center;gap:6px;font-size:11px;color:#657c56;cursor:pointer}.event-checks input{accent-color:var(--green);width:14px;height:14px;margin:0}.notification-actions{display:flex;justify-content:flex-end;gap:10px;align-items:center;margin-top:2px}.secondary-action{display:flex;align-items:center;justify-content:center;gap:7px;padding:11px 15px;border:1px solid #c9d9bd;border-radius:8px;background:#f4f8ed;color:#5d7f45;font-size:12px}.secondary-action:hover{background:#e9f1df}.secondary-action:disabled{opacity:.6;cursor:wait}.notification-actions .primary-action{width:auto;min-width:115px;padding:12px 17px}.notification-feedback{font-size:11px;color:#6c8858;line-height:1.8;min-height:20px;margin:0}.notification-feedback.error{color:#ac553d}.footer-notification{display:flex;align-items:center;gap:5px;padding:0;color:#7d9270;font-size:9px}.footer-notification:hover{color:var(--green)}
+    @media(max-width:520px){.form-row{grid-template-columns:1fr;gap:17px}.notification-actions{justify-content:stretch}.notification-actions button{flex:1}.notification-summary{align-items:flex-start}.event-checks{gap:12px}.notification-banner{font-size:10px}.footer-notification{font-size:8px}}
+    @keyframes arrive{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}@keyframes row-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pulse{50%{opacity:.4}}.pending-mark{animation:pulse 1.2s ease-in-out infinite}
+    @media(min-width:1500px){.layout{grid-template-columns:92px minmax(460px,1fr) 405px}.workspace{padding:29px 33px 22px}.inspector-head{padding:29px 29px 13px}.inspector-content{padding:0 29px 24px}.session-select{min-height:89px}.state-hero{height:160px}.state-hero svg{height:159px}}
+    @media(max-width:1230px){body{padding:14px}.app{height:calc(100vh - 28px);min-height:760px}.layout{grid-template-columns:75px minmax(420px,1fr) 330px}.rail{padding-left:4px;padding-right:4px}.rail-button{width:60px}.workspace{padding:23px 20px 16px}.inspector-head{padding:25px 20px 13px}.inspector-content{padding:0 20px 20px}.session-select{gap:8px;grid-template-columns:55px minmax(0,1fr) auto;padding-left:10px;padding-right:52px}.mini-art{width:53px;height:52px}.mini-art svg{width:54px}.monitor-switch{right:13px}.state-column{min-width:87px}.status-pill{font-size:9px}.session-title{font-size:12px}.list-toolbar{flex-wrap:wrap;gap:9px}.search{max-width:100%;min-width:130px}.filter{padding:7px 8px;gap:5px}.metrics{margin-bottom:18px}.metric{gap:9px}.metric+.metric{padding-left:14px}.metric-number{font-size:28px}.metric-label{font-size:10px}.metric-label strong{font-size:11px}.global-control{padding:9px 11px}}
+    @media(max-width:1000px){.layout{grid-template-columns:70px minmax(370px,1fr) 300px}.workspace{padding:23px 16px 14px}.inspector-head{padding:25px 17px 13px}.inspector-content{padding:0 17px 20px}.workspace h1{font-size:24px}.global-control small{display:none}.global-control{font-size:11px}.list-toolbar{display:block}.search{margin-top:10px}.filters{width:max-content}.session-select{grid-template-columns:46px minmax(0,1fr) auto;gap:6px;padding-left:8px;padding-right:44px}.mini-art{width:44px;height:47px}.mini-art svg{width:45px}.monitor-switch{right:9px}.session-subtitle span+span{display:none}.row-detail{font-size:8px}.state-column{min-width:83px}.metric-label small{display:none}.metric-number{font-size:25px}.metric{gap:6px}.metric+.metric{padding-left:11px}.metric-label strong{font-size:10px}.detail-description{font-size:10px}.titlebar{padding:0 20px}.platform{display:none}}
+    @media(max-width:800px){body{padding:0}.app{height:auto;min-height:100vh;border-radius:0;border:0;grid-template-rows:65px auto 36px}.titlebar{position:sticky;top:0;z-index:3;background:#fffefaf5;padding:0 15px}.brand-name{font-size:16px}.brand-sub{font-size:8px}.brand-mark{width:29px;height:29px}.preview-label{font-size:10px;padding:6px 8px}.layout{display:grid;grid-template-columns:61px minmax(0,1fr);overflow:visible}.rail{grid-row:1 / 3;padding:16px 3px;gap:5px}.rail-button{width:53px;font-size:10px;min-height:60px}.rail-bottom{margin-top:30px}.rail-button.active:before{left:-5px}.nav-count{right:8px}.workspace{padding:23px 16px 18px;overflow:visible}.workspace-head{margin-bottom:19px}.workspace h1{font-size:23px}.global-control{padding:9px;gap:5px}.global-control svg{width:15px}.metrics{padding:15px 0;margin-bottom:18px}.metric{display:block}.metric+.metric{padding-left:13px}.metric-number{font-size:28px;margin-bottom:7px}.metric-label strong{font-size:10px}.metric-label small{display:none}.list-toolbar{display:flex;flex-wrap:wrap}.search{margin:0;min-width:100%;max-width:100%}.session-list{overflow:visible;padding-right:0;gap:8px}.session-select{grid-template-columns:43px minmax(0,1fr) auto;padding:10px 39px 10px 8px;min-height:82px}.state-column{min-width:0}.status-pill{font-size:8px;padding:4px 5px;gap:3px}.session-title{font-size:11px;max-width:150px}.session-subtitle{font-size:9px}.monitor-switch{right:7px;transform:scale(.9)}.row-detail{font-size:8px}.inspector{grid-column:2;border-left:0;border-top:1px solid var(--line);overflow:visible}.inspector-head{padding:22px 22px 12px}.inspector-content{padding:0 22px 24px;display:grid;grid-template-columns:1fr 1fr;column-gap:20px}.inspector-main{min-width:0}.inspector-secondary{padding-top:20px;min-width:0}.state-hero{height:137px}.state-hero svg{height:137px}.inspector h2{font-size:19px}.statusbar{padding:0 12px;font-size:8px;gap:10px}.statusbar-right{gap:6px}.statusbar-right span:last-child{display:none}.list-note{font-size:9px}.timeline li{grid-template-columns:37px 1fr;gap:9px}.timeline li:before{left:39px}.timeline li:after{left:44px}.timeline p{padding-left:10px}.scenario-button{font-size:9px}.scenario-grid{grid-template-columns:1fr}.modal-body{padding:20px}.modal-head{padding:20px}.toast{bottom:16px;font-size:11px}}
+    @media(max-width:520px){.inspector-content{display:block}.inspector-secondary{padding-top:0}.state-hero{height:150px}.state-hero svg{height:150px}.brand-sub{display:none}.brand{gap:8px}.preview-label{font-size:9px;gap:5px}.brand-name{font-size:15px}.preview-label:before{width:4px;height:4px}.session-title{max-width:126px;font-size:10px}.status-pill svg{display:none}.session-select{grid-template-columns:36px minmax(0,1fr) auto;gap:5px;padding-right:34px}.mini-art{width:35px;height:44px}.mini-art svg{width:36px}.monitor-switch{right:3px}.row-detail{max-width:75px;overflow:hidden;text-overflow:ellipsis}.session-subtitle{font-size:8px}.workspace{padding:22px 11px 16px}.global-control .control-copy{font-size:10px}.global-control{padding:8px}.workspace h1{font-size:22px}.metric-number{font-size:26px}.metric+.metric{padding-left:10px}.metric-label strong{font-size:9px}.filter{font-size:10px}.filter span{font-size:9px}.inspector-head{padding-left:18px;padding-right:18px}.inspector-content{padding-left:18px;padding-right:18px}}
+    /* Dark material palette, kept together to make the visual theme easy to tune. */
+    :root{color-scheme:dark;--paper:#1a2123;--white:#222b2d;--ink:#e4e9e8;--muted:#a2aeae;--line:#344043;--green:#8bcdb7;--green-soft:#233b35;--amber:#dbb77e;--amber-soft:#403725;--red:#e3a28c;--red-soft:#45322b;--blue:#a9c5d0;--blue-soft:#2d3e43;--shadow:0 24px 80px #02070980}
+    body{background:radial-gradient(ellipse at 7% 0%,#1d3633 0,transparent 48%),radial-gradient(ellipse at 95% 95%,#262d30 0,transparent 45%),#121718}
+    body:before{opacity:.2;background-image:repeating-linear-gradient(90deg,transparent 0 31px,#afc4c40a 31px 32px),repeating-linear-gradient(0deg,transparent 0 31px,#afc4c40a 31px 32px)}
+    button:focus-visible,input:focus-visible,select:focus-visible{outline-color:#8ccab7}.app{border-color:#3c4c4d;background:linear-gradient(110deg,#1c2527,#1a2123 75%)}
+    .titlebar{background:#1c2527f5}.brand-mark{background:#263e38;color:#a8d8c5}.brand-name{color:#e6efea}.brand-sub,.platform{color:#8eaaa6}.preview-label{background:#263631;border-color:#415b51;color:#b5d0bd}.preview-label:before{background:#91b9a0}
+    .rail{background:#151e20}.rail-button{color:#96a8a7}.rail-button:hover{background:#293538;color:#d6e0dc}.rail-button.active{background:#293d37;border-color:#405e50;color:#a7d1bb;box-shadow:0 3px 10px #080f1028}.rail-button.active:before{background:#91c6ab}.rail-version{color:#819392}.nav-count{background:#b7785a;border-color:#151e20}.rail-separator{background:#344246}
+    .eyebrow{color:#8daba3}.workspace h1{color:#eef3f0}.global-control{background:#386f5d;color:#f0f8f2;box-shadow:0 5px 16px #07180e2b}.global-control:hover{background:#427e69}.global-control.paused{background:#363c3c;color:#c5ceca}.global-control small{color:#cfe3d8}
+    .metric-number{color:#dce8e3}.metric-number.green{color:#9cd0b9}.metric-number.attention{color:#e4aa82}.metric-label{color:#99aaa6}.metric-label strong{color:#c2d0c9}.metric+.metric{border-color:#3b4849}
+    .filters{background:#121c1e}.filter{color:#9caeaa}.filter[aria-pressed="true"]{background:#33413e;color:#d3e2d8;box-shadow:0 2px 5px #08131030}.search{background:#172124;border-color:#3b4c4e;color:#9ab1a9}.search input{color:#d7e1dc}.search input::placeholder{color:#8b9c99}.search:focus-within{border-color:#7aa997;box-shadow:0 0 0 2px #a5c7b614}.clear-search{color:#abc1b7}.list-heading{color:#93a6a0}
+    .session-list{scrollbar-color:#4d6360 transparent}.session-card{background:#222c2e;border-color:#354447}.session-card:hover{background:#2a3738;border-color:#587469}.session-card.selected{background:#2c3c38;border-color:#8db398;box-shadow:0 4px 16px #08161026}.session-card.selected:before{background:#bad6ad}.session-title{color:#e0e9e4}.session-subtitle,.row-detail{color:#a8b9b0}.session-subtitle span+span:before{color:#60766d}.status-pill{box-shadow:inset 0 0 0 1px #ffffff06}.monitor-switch{background:#4b5e59}.monitor-switch:before{background:#e5ede4;box-shadow:0 1px 3px #07131055}.monitor-switch[aria-checked="true"]{background:#79a68a}.list-note{color:#9aada4}.empty-state{border-color:#496359;color:#a2b6aa}.empty-state strong{color:#c4d7c6}
+    .inspector{background:linear-gradient(165deg,#1c2829,#192326);border-left-color:#384c49;scrollbar-color:#4c6660 transparent}.inspector-head span{color:#a3b7ad}.inspector-head .detail-id{color:#89a094}.state-hero{background:radial-gradient(ellipse at center,var(--tint),transparent 73%)}.state-hero:after{background:linear-gradient(90deg,transparent,#72918b55,transparent)}.state-hero svg{filter:drop-shadow(0 10px 9px #05100a30)}.hero-caption{color:#8fa397}.detail-state small{color:#a7b8ae}.inspector h2{color:#e4eddf}.detail-description{color:#adbdaf}.detail-facts{background:#25332e;border-color:#3e5548}.fact-row dt{color:#a2b5a5}.fact-row dd{color:#cad7bf}
+    .primary-action{background:#3c7661;color:#f0f8ed}.primary-action:hover{background:#44826c}.primary-action:disabled{background:#313f3b;color:#aebeb0}.primary-action.pending{background:#3a4936;color:#cedebe}.action-note{color:#9bad99}.timeline-head span{color:#96aa99}.timeline-head h3{color:#d6e0cb}.timeline li:before{background:#8aa47f;border-color:#1b2728}.timeline li:after{background:#405547}.timeline p{color:#b3c2aa}.timeline time{color:#9bb09b}.scenario-button{background:#293a30;border-color:#526e55;color:#c0d2ae}.scenario-button:hover{background:#334b3c;border-color:#91ad82}
+    .statusbar{background:#152021;border-color:#344a43;color:#9bafa4}.status-dot{background:#a3c58d}.status-dot.paused{background:#c7a76c}.statusbar kbd{border-color:#4a6155;color:#b2c4b0}.footer-notification{color:#adc1ad}.footer-notification:hover{color:#dae8cf}
+    dialog{background:#202b2d;border-color:#4e6760;box-shadow:0 25px 100px #00000088}dialog::backdrop{background:#060e10b0}.modal-head{border-color:#3b514b}.modal-head small{color:#9eb9aa}.modal-head h2{color:#e2edda}.modal-close{background:#34453e;color:#c2d4ba}.modal-close:hover{background:#41574b}.modal-intro{color:#b7c7b2}.log-item{border-color:#3e5549}.log-item:hover{background:#2c4035}.log-item h3{color:#dae5cd}.log-item p{color:#b9c9b0}.log-item small{color:#a1b99a}
+    .policy{background:#29362f;border-color:#465b4c}.policy h3{color:#d8e4ca}.policy p{color:#b7c6ae}.policy strong{color:#dce8ce}.policy code{background:#3d5040;color:#dfeacb}.policy-safe{background:#253c30;border-color:#4a6d53}.policy-safe h3{color:#b8d8b9}.scenario-option{background:#29382f;border-color:#49614e}.scenario-option:hover{background:#3a5140;border-color:#97b386}.scenario-option strong{color:#dde7d0}.scenario-option small{color:#afc39f}.demo-disclaimer{background:#2d3f31;color:#becea9}.toast{background:#304735;border-color:#829f6c;color:#e0ecc9;box-shadow:0 8px 28px #07140a55}
+    .notification-banner{background:#293d32;border-color:#4d6750;color:#dce8ca}.notification-banner small{color:#baccad}.notification-summary{background:#26332e;border-color:#42594a}.notification-summary strong{color:#e0e9cf}.notification-summary p{color:#b3c4a7}.summary-state{background:#3e523d;color:#dce6c6}.form-field label,.event-options legend{color:#d1dfc3}.form-field input,.form-field select{background:#182424;border-color:#4c6557;color:#e0e8ce}.form-field input::placeholder{color:#9bb18d}.form-field input[aria-invalid="true"]{background:#3a2c26;border-color:#c88c68}.field-hint{color:#acbe9c}.field-error{color:#e6b28b}.setting-enabled{border-color:#41584b}.setting-enabled strong{color:#e0e8ce}.setting-enabled small{color:#afc2a2}.setting-switch{background:#52664d}.setting-switch:before{background:#e9efdb}.setting-switch[aria-checked="true"]{background:#8caf7e}.event-checks label{color:#ccdbb8}.event-checks input{accent-color:#a7c78b}.secondary-action{background:#344b35;border-color:#617c52;color:#d8e6bd}.secondary-action:hover{background:#415c3f}.notification-feedback{color:#cfddbb}.notification-feedback.error{color:#e6b28b}
+    @media(max-width:800px){.titlebar{background:#1c2527f5}.inspector{border-top-color:#3b514b}.timeline li:before{border-color:#1b2728}}
+    @media(max-width:520px){#demo-clock{display:none}}
+    @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+  </style>
+</head>
+<body>
+  <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" aria-hidden="true" style="position:absolute">
+    <defs>
+      <symbol id="i-flow" viewBox="0 0 24 24"><path d="M4 8h9l-3-3m3 3-3 3M20 16h-9l3 3m-3-3 3-3M5 13a7 7 0 0 0 11 6M19 11A7 7 0 0 0 8 5"/></symbol>
+      <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+      <symbol id="i-log" viewBox="0 0 24 24"><path d="M8 3H5v18h14V3h-3M9 3h6v4H9zM8 12h8M8 16h5"/></symbol>
+      <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h7m4 0h5M4 17h3m4 0h9"/><circle cx="13" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
+      <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v1"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+      <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></symbol>
+      <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h16m-6-6 6 6-6 6"/></symbol>
+      <symbol id="i-retry" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5M6 7a7 7 0 0 1 12-1l2 3M4 15l2 3a7 7 0 0 0 12-1"/></symbol>
+      <symbol id="i-network" viewBox="0 0 24 24"><path d="m3 3 18 18M3 8a15 15 0 0 1 3-2M10 4a15 15 0 0 1 11 4M6 12a10 10 0 0 1 3-2m5 0a10 10 0 0 1 4 2M9 16a5 5 0 0 1 5-1M12 20h.01"/></symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+      <symbol id="i-stop" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></symbol>
+      <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+      <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z"/></symbol>
+      <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M9 21h6M12 2V1"/></symbol>
+    </defs>
+  </svg>
+  <div class="app">
+    <header class="titlebar">
+      <div class="brand"><div class="brand-mark" aria-hidden="true"><svg width="23" height="23" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-flow"/></svg></div><div><div class="brand-name">Codex 续航</div><p class="brand-sub">A LITTLE CONTINUITY.</p></div></div>
+      <div class="titlebar-right"><span class="platform">WINDOWS · WPF</span><span class="preview-label">界面预览 · 模拟数据</span></div>
+    </header>
+    <div class="layout">
+      <nav class="rail" aria-label="主导航">
+        <button class="rail-button active" id="nav-sessions" aria-current="page"><svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><use href="#i-grid"/></svg><span>会话总览</span></button>
+        <button class="rail-button" data-modal="logs"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><use href="#i-log"/></svg><span>异常记录</span><span class="nav-count" id="log-count">2</span></button>
+        <button class="rail-button" data-modal="policy"><svg width="23" height="23" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><use href="#i-sliders"/></svg><span>重试策略</span></button>
+        <button class="rail-button" data-modal="notifications"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><use href="#i-bell"/></svg><span>通知设置</span></button>
+        <div class="rail-separator"></div>
+        <button class="rail-button rail-bottom" data-modal="about"><svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><use href="#i-info"/></svg><span>预览说明</span></button>
+        <span class="rail-version">PREVIEW 01</span>
+      </nav>
+      <main class="workspace" id="session-workspace">
+        <div class="workspace-head"><div><p class="eyebrow">YOUR CONTINUITY DESK</p><h1>会话总览</h1></div><button class="global-control" id="global-control" aria-pressed="true"></button></div>
+        <section class="metrics" aria-label="模拟会话统计">
+          <div class="metric"><div class="metric-number green" id="metric-running">02</div><div class="metric-label"><strong>正在推进</strong><small>运行与内部重试</small></div></div>
+          <div class="metric"><div class="metric-number attention" id="metric-attention">03</div><div class="metric-label"><strong>需要关注</strong><small>等待恢复或确认</small></div></div>
+          <div class="metric"><div class="metric-number" id="metric-monitor">05</div><div class="metric-label"><strong>监控已启用</strong><small>共 6 个模拟会话</small></div></div>
+        </section>
+        <div class="list-toolbar">
+          <div class="filters" role="group" aria-label="筛选会话"><button class="filter" data-filter="all" aria-pressed="true">全部 <span id="count-all">6</span></button><button class="filter" data-filter="running" aria-pressed="false">执行中 <span id="count-running">2</span></button><button class="filter" data-filter="attention" aria-pressed="false">需关注 <span id="count-attention">3</span></button></div>
+          <label class="search"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6"><use href="#i-search"/></svg><span class="sr-only">搜索会话名称或状态</span><input id="search" placeholder="搜索会话或状态" autocomplete="off"><button class="clear-search hidden" id="clear-search" type="button" aria-label="清除搜索">×</button></label>
+        </div>
+        <div class="list-heading"><span id="list-result">会话 / 6</span><span>状态 / 监控</span></div>
+        <section class="session-list" id="session-list" aria-label="模拟会话列表"></section>
+        <div class="list-note"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5"><use href="#i-lock"/></svg><span>仅对可恢复异常续接；审批、用户停止和正常完成始终等待人工处理。</span></div>
+      </main>
+      <aside class="inspector" id="inspector" aria-label="选中会话详情"></aside>
+    </div>
+    <footer class="statusbar"><div class="statusbar-left"><span class="status-dot" id="global-dot"></span><span id="footer-state">模拟监控运行中</span><span>·</span><span>未连接真实 Codex</span></div><div class="statusbar-right"><button class="footer-notification" id="notification-status" aria-label="打开通知设置">通知未配置</button><span id="demo-clock">演示时间 14:36:00</span><span><kbd>/</kbd> 搜索会话</span></div></footer>
+  </div>
+  <dialog id="modal" aria-labelledby="modal-title"><div class="modal-head"><div><small id="modal-eyebrow">LOCAL PREVIEW</small><h2 id="modal-title"></h2></div><button class="modal-close" id="modal-close" aria-label="关闭弹层"></button></div><div class="modal-body" id="modal-body"></div></dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script>
+    'use strict';
+    const $ = (selector, root = document) => root.querySelector(selector);
+    const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+    const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    const icon = (name, size = 18, extra = '') => `<svg ${extra} width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+    const states = {
+      running: {label:'执行中', icon:'play', tone:'#8cceb0', tint:'#253e30', detail:'任务正在向前推进', description:'已持续收到执行事件，当前正在校验资源引用与构建结果。无需发送续接请求。', reason:'运行正常', action:'任务执行中', foot:'持续观察执行事件，保持当前任务流程。', micro:'持续收到执行事件', note:'正常运行'},
+      retry: {label:'内部重试', icon:'retry', tone:'#d5ba7c', tint:'#3d3728', detail:'让内部重试先完成', description:'Codex 正在自行重试一次工具调用。面板只观察结果，避免重复发送继续指令。', reason:'工具调用暂时失败', action:'等待内部重试', foot:'由 Codex 自行处理，面板不会叠加续接。', micro:'内部恢复流程进行中', note:'由 Codex 处理'},
+      network: {label:'网络失败待重试', icon:'network', tone:'#e3a28c', tint:'#45322b', detail:'连接中断，等待续接', description:'模拟连接在接收执行结果时中断。将在等待期结束后发送续接，并确认是否收到新的执行事件。', reason:'连接意外关闭 · ECONNRESET', action:'立即继续', foot:'本地模拟：发送后约 2.4 秒收到恢复确认。', micro:'连接中断，已进入等待', note:'可自动恢复'},
+      quota: {label:'额度等待', icon:'clock', tone:'#dbb77e', tint:'#403725', detail:'留一点时间，等待额度', description:'模拟服务返回额度限制。等待示例重置时间后再尝试，避免短时间反复发送。', reason:'达到使用限制 · RATE_LIMIT', action:'立即继续', foot:'本地模拟：人工续接同样演示恢复确认流程。', micro:'等待示例额度重置', note:'到时再尝试'},
+      approval: {label:'等待用户批准', icon:'lock', tone:'#a9c5d0', tint:'#2d3e43', detail:'下一步，由你来决定', description:'此会话需要用户批准一项操作。自动继续不会替代审批，请在真实 Codex 中查看操作内容。', reason:'一项操作需要用户批准', action:'需在 Codex 中人工批准', foot:'预览未连接 Codex，不会提交或代替任何批准。', micro:'等待人工审批', note:'仅人工处理'},
+      complete: {label:'已完成', icon:'check', tone:'#aec998', tint:'#303d29', detail:'这一程，已经完成', description:'任务已正常结束，最后一次执行结果已返回。面板保留记录，方便查看处理过程。', reason:'正常完成', action:'任务已完成', foot:'正常完成不会触发自动继续。', micro:'执行结果已返回', note:'无需继续'},
+      stopped: {label:'用户已停止', icon:'stop', tone:'#b1bfaa', tint:'#323c2d', detail:'尊重这一次暂停', description:'模拟用户主动停止任务。面板不会自动发送继续，也不会将主动停止判断为异常。', reason:'用户主动停止', action:'用户已停止任务', foot:'请在真实 Codex 中手动发起新的执行。', micro:'用户主动结束执行', note:'禁止自动续接'},
+      resuming: {label:'等待恢复确认', icon:'clock', tone:'#b8cf8e', tint:'#36442b', detail:'已发送，等待恢复确认', description:'模拟续接请求已经发送。只有收到新的执行事件，才会确认恢复并显示运行中的状态。', reason:'续接已发送，尚未确认', action:'已发送，等待恢复确认', foot:'本地模拟：约 2.4 秒后产生新的执行事件。', micro:'续接请求已发送', note:'尚未恢复运行'}
+    };
+    let demoSeconds = 0;
+    let globalMonitoring = true;
+    let activeFilter = 'all';
+    let selectedId = 's3';
+    let toastTimer;
+    const notificationPlatforms = {dingtalk:'钉钉',feishu:'飞书',wecom:'企业微信',generic:'通用 Webhook'};
+    const notificationEvents = {exception:'会话异常',recovered:'确认恢复',exhausted:'重试耗尽'};
+    let notificationSettings = {platform:'dingtalk',name:'',webhook:'',secret:'',enabled:false,events:{exception:true,recovered:true,exhausted:true}};
+    let notificationSaved = false;
+    let notificationDraft = null;
+    let notificationLastTest = null;
+    let notificationLastEvent = null;
+    let notificationTestVersion = 0;
+    let currentModalType = '';
+    const sessions = [
+      {id:'s1', name:'整理读书笔记目录', project:'个人知识库', step:'校验目录与链接', state:'running', monitor:true, retries:0, remaining:0, events:[['35:56','收到新的执行事件'],['35:42','开始检查目录结构'],['34:12','任务开始执行']]},
+      {id:'s2', name:'制作天气卡片组件', project:'示例组件', step:'重新调用构建工具', state:'retry', monitor:true, retries:1, remaining:0, events:[['35:51','进入工具内部重试'],['35:49','工具调用暂时失败'],['34:31','开始构建卡片组件']]},
+      {id:'s3', name:'完善旅行清单页面', project:'旅行小工具', step:'检查页面交互', state:'network', monitor:true, retries:2, remaining:30, events:[['35:58','连接中断，进入 30 秒等待'],['35:57','接收结果时连接意外关闭'],['35:12','第 2 次续接后恢复执行'],['33:46','开始检查页面交互']]},
+      {id:'s4', name:'生成每周阅读摘要', project:'阅读助手', step:'等待示例额度重置', state:'quota', monitor:true, retries:0, remaining:300, events:[['35:47','已设置示例额度等待时间'],['35:46','服务返回使用额度限制'],['32:10','开始整理阅读摘要']]},
+      {id:'s5', name:'归档示例图片素材', project:'素材整理', step:'等待操作批准', state:'approval', monitor:true, retries:0, remaining:0, events:[['35:38','需要人工批准文件操作'],['35:37','面板保持观察，不发送继续'],['31:25','开始分析示例图片']]},
+      {id:'s6', name:'优化番茄钟配色', project:'专注小工具', step:'已完成视觉调整', state:'complete', monitor:false, retries:0, remaining:0, events:[['34:52','任务正常完成'],['34:41','视觉检查通过'],['30:21','开始调整主题颜色']]}
+    ];
+    const selected = () => sessions.find(session => session.id === selectedId);
+    const isActive = session => ['running','retry','resuming'].includes(session.state);
+    const needsAttention = session => ['network','quota','approval','stopped'].includes(session.state);
+    const isRecoverable = session => ['network','quota'].includes(session.state);
+    const stateStyle = state => `--tone:${states[state].tone};--tint:${states[state].tint}`;
+    const formatTime = seconds => `${Math.floor(seconds / 60).toString().padStart(2,'0')}:${(seconds % 60).toString().padStart(2,'0')}`;
+    const currentTime = () => { const elapsed = 36 * 60 + demoSeconds; return `14:${formatTime(elapsed)}`; };
+    const nextLabel = session => {
+      if (session.state === 'resuming') return '等待新执行事件';
+      if (session.state === 'retry') return '由 Codex 内部决定';
+      if (!isRecoverable(session)) return '不触发自动续接';
+      if (session.retries >= 5) return '已达上限，等待人工处理';
+      if (!session.monitor) return '单会话监控已关闭';
+      if (!globalMonitoring) return '全局暂停，倒计时已冻结';
+      return `${formatTime(session.remaining)} 后 · 模拟倒计时`;
+    };
+
+    // Each status has its own silhouette, so recognition does not depend on color.
+    function illustration(state, small = false) {
+      const art = {
+        running:'<path d="M26 85h28l20-28h46" stroke="#91b59e" stroke-width="3" stroke-dasharray="3 5" fill="none"/><rect x="21" y="74" width="22" height="22" rx="6" fill="#c0dbc3"/><circle cx="76" cy="57" r="17" fill="#e5efe1" stroke="#90b39a" stroke-width="1.5"/><path d="m70 49 15 8-15 8z" fill="#2c7a5c"/><path d="m104 34 35 23-35 23 7-23z" fill="#559b78"/><path d="m111 57 28 0-35 23z" fill="#337958"/><path d="m104 34 7 23 28 0" fill="#a6cfad"/><circle cx="43" cy="37" r="3" fill="#9cbd89"/><path d="M126 89v8m-4-4h8" stroke="#aac293" stroke-width="2"/>',
+        retry:'<circle cx="80" cy="63" r="31" fill="#f7e9c9"/><path d="M46 56a36 36 0 0 1 65-17" stroke="#b9924d" stroke-width="3" fill="none"/><path d="m113 28 1 15-15-2" stroke="#b9924d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M114 70a36 36 0 0 1-65 18" stroke="#d9bf80" stroke-width="3" fill="none"/><path d="m47 99-1-15 15 2" stroke="#d9bf80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/><rect x="66" y="49" width="28" height="28" rx="9" fill="#fff9e9" stroke="#b99557" stroke-width="1.5"/><circle cx="74" cy="63" r="2" fill="#a17733"/><circle cx="86" cy="63" r="2" fill="#a17733"/><path d="M24 76h9m93-28h10" stroke="#d6c294" stroke-width="2"/>',
+        network:'<path d="M20 92h122" stroke="#e0c5b7" stroke-width="1.5"/><path d="m30 75 26-14 26 14-26 14z" fill="#d79c85"/><path d="m30 75 26 14v17L30 92z" fill="#c78b74"/><path d="m56 89 26-14v17l-26 14z" fill="#e8b69c"/><path d="m96 49 26-14 26 14-26 14z" fill="#f1c8b4"/><path d="m96 49 26 14v17L96 66z" fill="#d89378"/><path d="m122 63 26-14v17l-26 14z" fill="#e6b29a"/><path d="m69 66 9-7m9-8 9-7" stroke="#b8573d" stroke-width="2" stroke-dasharray="3 4"/><path d="m81 35-6 12 10-1-6 13" stroke="#a94b35" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="37" cy="41" r="3" fill="#dcac94"/><path d="m127 93 4 4m-4 0 4-4" stroke="#c58b75" stroke-width="1.5"/>',
+        quota:'<ellipse cx="80" cy="101" rx="29" ry="5" fill="#e6d7ad"/><path d="M60 26h40M60 94h40" stroke="#a88543" stroke-width="5" stroke-linecap="round"/><path d="M64 29c0 20 2 22 16 32-14 10-16 12-16 30h32c0-18-2-20-16-30 14-10 16-12 16-32z" fill="#fcf8e8" stroke="#b59a62" stroke-width="1.7"/><path d="m69 42 22 0c-2 7-7 12-11 15-4-3-9-8-11-15M70 87c1-6 5-10 10-13 5 3 9 7 10 13z" fill="#d9b367"/><path d="M80 63v5" stroke="#bc9449" stroke-width="2" stroke-dasharray="1 2"/><circle cx="117" cy="49" r="14" fill="#f7edcf" stroke="#c5aa70" stroke-width="1.5"/><path d="M117 41v9l5 3" stroke="#a17c38" stroke-width="1.7" stroke-linecap="round" fill="none"/><path d="M35 66h11m-5-5v10" stroke="#d1bc83" stroke-width="2"/>',
+        approval:'<path d="M48 32h51l14 14v52H48z" fill="#d8e4e8" stroke="#9fb4bc" stroke-width="1.4"/><path d="M99 32v14h14" fill="#edf4f3" stroke="#9fb4bc" stroke-width="1.4"/><path d="M60 47h22M60 57h37M60 67h22" stroke="#9cb2b9" stroke-width="2" stroke-linecap="round"/><path d="M99 64c9 7 17 6 17 6v13c0 12-17 19-17 19S82 95 82 83V70s8 1 17-6z" fill="#7396a4"/><rect x="92" y="79" width="14" height="11" rx="3" fill="#edf4ed"/><path d="M95 79v-4a4 4 0 0 1 8 0v4" stroke="#edf4ed" stroke-width="2" fill="none"/><path d="M32 71h9m-5-5v10" stroke="#aac1c5" stroke-width="2"/><circle cx="122" cy="37" r="3" fill="#c7d6d7"/>',
+        complete:'<path d="M47 34h49l17 17v46H47z" fill="#dbe6d0" stroke="#b4c5a5" stroke-width="1.5"/><path d="M96 34v17h17" fill="#f0f6e9" stroke="#b4c5a5" stroke-width="1.5"/><path d="M59 51h21M59 61h30M59 71h20" stroke="#b1c49f" stroke-width="2" stroke-linecap="round"/><circle cx="101" cy="84" r="21" fill="#7e9e69"/><path d="m91 84 7 7 14-15" stroke="#f7fbf1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="m123 33 3 7 7 3-7 3-3 7-3-7-7-3 7-3z" fill="#c0d19f"/><path d="M31 65v9m-4-4h8" stroke="#c0d19f" stroke-width="2"/>',
+        stopped:'<circle cx="80" cy="62" r="36" fill="#e2e8db" stroke="#aebba1" stroke-width="1.5"/><rect x="65" y="47" width="30" height="30" rx="6" fill="#8d9c7f"/><path d="M37 101h86" stroke="#d2dcca" stroke-width="2"/><circle cx="126" cy="37" r="3" fill="#c1cdb6"/><path d="M27 50h9m-4-4v8" stroke="#b8c8ab" stroke-width="2"/>',
+        resuming:'<path d="m39 57 75-28-22 65-18-25z" fill="#b7cda0" stroke="#8ba36e" stroke-width="1.2"/><path d="m74 69 40-40-23 65z" fill="#91b273"/><path d="m39 57 35 12 40-40z" fill="#d7e5c5"/><path d="m33 78-11 8m22 2-11 8" stroke="#b7cba1" stroke-width="2" stroke-linecap="round"/><circle cx="112" cy="86" r="18" fill="#f5f8eb" stroke="#8ea575" stroke-width="1.5"/><path d="M112 76v10l6 4" stroke="#77915b" stroke-width="2" stroke-linecap="round" fill="none"/><circle class="pending-mark" cx="132" cy="43" r="3" fill="#88a768"/>'
+      };
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 120" role="img" aria-label="${states[state].label}状态插画"><path d="M23 105h115M35 22v7m-3-4h6" stroke="#b1c1a5" stroke-opacity=".25" stroke-width="1"/>${art[state]}</svg>`;
+    }
+
+    function preserveFocus(render) {
+      const id = document.activeElement && document.activeElement.id;
+      render();
+      if (id) document.getElementById(id)?.focus({preventScroll:true});
+    }
+    function renderList() {
+      const query = $('#search').value.trim().toLowerCase();
+      const list = sessions.filter(session => (activeFilter === 'all' || (activeFilter === 'running' ? isActive(session) : needsAttention(session))) && `${session.name} ${session.project} ${states[session.state].label}`.toLowerCase().includes(query));
+      $('#list-result').textContent = `会话 / ${list.length}${query ? ' 个匹配结果' : ''}`;
+      $('#clear-search').classList.toggle('hidden', !query);
+      $('#session-list').innerHTML = list.length ? list.map((session, index) => {
+        const state = states[session.state];
+        return `<article class="session-card ${session.id === selectedId ? 'selected' : ''}" style="${stateStyle(session.state)};--delay:${Math.min(index * .045,.2)}s"><button class="session-select" id="select-${session.id}" data-select="${session.id}" aria-pressed="${session.id === selectedId}" aria-label="查看${session.name}，${state.label}"><span class="mini-art">${illustration(session.state,true)}</span><span><span class="session-title" style="display:block">${escapeHtml(session.name)}</span><span class="session-subtitle"><span>${escapeHtml(session.project)}</span><span>${escapeHtml(session.step)}</span></span></span><span class="state-column"><span class="status-pill">${icon(state.icon,11)}${state.label}</span><span class="row-detail" style="display:block" data-row-timer="${session.id}">${rowLabel(session)}</span></span></button><button class="monitor-switch" id="monitor-${session.id}" role="switch" aria-checked="${session.monitor}" aria-label="监控${session.name}" data-monitor="${session.id}" title="${session.monitor ? '关闭' : '启用'}此会话监控"></button></article>`;
+      }).join('') : '<div class="empty-state"><strong>这里暂时没有会话</strong>试试其他筛选，或换一个搜索词。</div>';
+    }
+    function rowLabel(session) {
+      if (isRecoverable(session) && session.retries >= 5) return '已达重试上限';
+      if (isRecoverable(session) && globalMonitoring && session.monitor) return `${formatTime(session.remaining)} 后重试`;
+      if (isRecoverable(session)) return '自动续接已暂停';
+      return states[session.state].note;
+    }
+    function renderInspector() {
+      const session = selected();
+      const state = states[session.state];
+      const pending = session.state === 'resuming';
+      const timeline = session.events.slice(0,4).map(event => `<li><time>${event[0]}</time><p>${escapeHtml(event[1])}</p></li>`).join('');
+      $('#inspector').style.cssText = stateStyle(session.state);
+      $('#inspector').innerHTML = `<div class="inspector-head"><span>会话检查</span><span class="detail-id">DEMO / ${session.id.slice(1).padStart(2,'0')}</span></div><div class="inspector-content"><div class="inspector-main"><div class="state-hero">${illustration(session.state)}<span class="hero-caption">${pending ? 'WAITING FOR CONFIRMATION' : 'EVERY STATE TELLS A STORY'}</span></div><div class="detail-state"><span class="status-pill">${icon(state.icon,12)}${state.label}</span><small>${state.note}</small></div><h2>${escapeHtml(session.name)}</h2><p class="detail-description">${state.description}</p><dl class="detail-facts"><div class="fact-row"><dt>当前原因</dt><dd class="reason-value">${state.reason}</dd></div><div class="fact-row"><dt>续接次数</dt><dd>${session.retries} / 5 次${session.state === 'retry' ? ' · 内部重试另计' : ''}</dd></div><div class="fact-row"><dt>下次续接</dt><dd id="next-retry">${nextLabel(session)}</dd></div></dl><button class="primary-action ${pending ? 'pending' : ''}" id="continue-session" ${!isRecoverable(session) ? 'disabled' : ''}>${icon(pending ? 'clock' : isRecoverable(session) ? 'arrow' : state.icon,16)}${state.action}</button><p class="action-note">${state.foot}</p></div><div class="inspector-secondary"><div class="timeline-head"><h3>最近事件</h3><span>模拟事件时间线</span></div><ol class="timeline">${timeline}</ol><button class="scenario-button" id="scenario-open">${icon('spark',14)}切换演示情景${icon('arrow',13)}</button></div></div>`;
+    }
+    function renderCounts() {
+      const running = sessions.filter(isActive).length;
+      const attention = sessions.filter(needsAttention).length;
+      $('#metric-running').textContent = String(running).padStart(2,'0');
+      $('#metric-attention').textContent = String(attention).padStart(2,'0');
+      $('#metric-monitor').textContent = String(sessions.filter(session => session.monitor).length).padStart(2,'0');
+      $('#count-all').textContent = sessions.length;
+      $('#count-running').textContent = running;
+      $('#count-attention').textContent = attention;
+      $('#log-count').textContent = sessions.filter(isRecoverable).length;
+      $$('.filter').forEach(button => button.setAttribute('aria-pressed',String(button.dataset.filter === activeFilter)));
+      $('#global-control').classList.toggle('paused',!globalMonitoring);
+      $('#global-control').setAttribute('aria-pressed',String(globalMonitoring));
+      $('#global-control').innerHTML = `${icon(globalMonitoring ? 'pause' : 'play',17)}<span class="control-copy">${globalMonitoring ? '暂停监控' : '恢复监控'}<small>${globalMonitoring ? 'MONITORING ON' : 'MONITORING PAUSED'}</small></span>`;
+      $('#footer-state').textContent = globalMonitoring ? '模拟监控运行中' : '模拟监控已暂停';
+      $('#global-dot').classList.toggle('paused',!globalMonitoring);
+    }
+    function renderAll() { preserveFocus(() => { renderList(); renderInspector(); renderCounts(); }); }
+    function notify(message) {
+      clearTimeout(toastTimer);
+      $('#toast').textContent = message;
+      $('#toast').classList.add('visible');
+      toastTimer = setTimeout(() => $('#toast').classList.remove('visible'),3500);
+    }
+    function addEvent(session, message) { session.events.unshift([currentTime().slice(3),message]); session.events = session.events.slice(0,10); }
+
+    // Notification configuration and test results live only in this page's memory.
+    function notificationMarkup() {
+      return `<div class="notification-banner">${icon('info',17)}<div><strong>界面预览：测试通知仅模拟，不会发送到真实 Webhook。</strong><small>地址与签名密钥仅保留在当前页面内存，刷新即清除。</small></div></div><section class="notification-summary" aria-label="通知设置摘要"><div><strong id="notification-summary-title">尚未配置通知</strong><p id="notification-summary-test">最近测试：尚未测试</p><p id="notification-summary-event">最近事件通知：暂无模拟记录</p></div><span class="summary-state" id="notification-summary-state">未保存</span></section><form class="notification-form" id="notification-form" novalidate autocomplete="off"><div class="form-row"><div class="form-field"><label for="notification-platform">通知平台</label><select id="notification-platform">${Object.entries(notificationPlatforms).map(([key,label]) => `<option value="${key}">${label}</option>`).join('')}</select></div><div class="form-field"><label for="notification-name">渠道名称</label><input id="notification-name" type="text" maxlength="48" placeholder="例如：工作提醒" autocomplete="off"></div></div><div class="form-field"><label for="notification-webhook">Webhook 地址</label><input id="notification-webhook" type="password" inputmode="url" placeholder="请输入 HTTPS Webhook 地址" autocomplete="new-password" spellcheck="false" aria-describedby="notification-webhook-hint notification-webhook-error" aria-invalid="false"><small class="field-hint" id="notification-webhook-hint">地址隐藏显示；保存摘要不会展示完整地址或其中的 token。</small><span class="field-error" id="notification-webhook-error" role="alert"></span></div><div class="form-field" id="notification-secret-group"><label for="notification-secret">签名密钥 <span style="color:#9aa98a">· 可选</span></label><input id="notification-secret" type="password" placeholder="未启用签名时可留空" autocomplete="new-password" spellcheck="false"><small class="field-hint">用于演示钉钉 / 飞书签名设置；预览不会计算签名或发起网络请求。</small></div><div class="setting-enabled"><div><strong>启用通知</strong><small>开启后，所选事件仅生成本地模拟通知记录。</small></div><button class="setting-switch" id="notification-enabled" type="button" role="switch" aria-checked="false" aria-label="启用通知"></button></div><fieldset class="event-options" aria-describedby="notification-events-error"><legend>通知事件</legend><div class="event-checks">${Object.entries(notificationEvents).map(([key,label]) => `<label><input type="checkbox" id="notification-event-${key}" value="${key}">${label}</label>`).join('')}</div><span class="field-error" id="notification-events-error" role="alert"></span></fieldset><p class="notification-feedback" id="notification-feedback" role="status" aria-live="polite">可先模拟测试，再保存设置。</p><div class="notification-actions"><button class="secondary-action" id="notification-test" type="button">${icon('bell',15)}测试通知（模拟）</button><button class="primary-action" id="notification-save" type="submit">${icon('check',15)}保存设置</button></div></form>`;
+    }
+    function updateNotificationSummary() {
+      const platform = notificationPlatforms[notificationSettings.platform];
+      $('#notification-status').textContent = notificationSaved ? `${platform} · ${notificationSettings.enabled ? '模拟通知已开' : '通知已关'}` : '通知未配置';
+      if (currentModalType !== 'notifications' || !$('#modal').open) return;
+      $('#notification-summary-title').textContent = notificationSaved ? `${platform} · ${notificationSettings.enabled ? '已开启' : '已关闭'}` : '尚未配置通知';
+      $('#notification-summary-state').textContent = notificationSaved ? '仅本页内存' : '未保存';
+      $('#notification-summary-test').textContent = notificationLastTest ? `最近测试：${notificationLastTest.platform} · 模拟成功 · ${notificationLastTest.time}` : '最近测试：尚未测试';
+      $('#notification-summary-event').textContent = notificationLastEvent ? `最近事件通知：${notificationLastEvent.platform} · ${notificationLastEvent.event} · ${notificationLastEvent.time}（模拟）` : '最近事件通知：暂无模拟记录';
+    }
+    function loadNotificationForm() {
+      notificationDraft = {...notificationSettings,events:{...notificationSettings.events}};
+      $('#notification-platform').value = notificationDraft.platform;
+      $('#notification-name').value = notificationDraft.name;
+      $('#notification-webhook').value = notificationDraft.webhook;
+      $('#notification-secret').value = notificationDraft.secret;
+      $('#notification-enabled').setAttribute('aria-checked',String(notificationDraft.enabled));
+      Object.keys(notificationEvents).forEach(key => { $(`#notification-event-${key}`).checked = notificationDraft.events[key]; });
+      $('#notification-secret-group').classList.toggle('hidden',!['dingtalk','feishu'].includes(notificationDraft.platform));
+      updateNotificationSummary();
+    }
+    function readNotificationForm() {
+      return {platform:$('#notification-platform').value,name:$('#notification-name').value.trim(),webhook:$('#notification-webhook').value.trim(),secret:['dingtalk','feishu'].includes($('#notification-platform').value) ? $('#notification-secret').value.trim() : '',enabled:$('#notification-enabled').getAttribute('aria-checked') === 'true',events:Object.fromEntries(Object.keys(notificationEvents).map(key => [key,$(`#notification-event-${key}`).checked]))};
+    }
+    function validateNotificationForm(config) {
+      let error = '';
+      if (!config.webhook) error = '请输入 Webhook 地址，测试和保存都需要填写。';
+      else { try { const url = new URL(config.webhook); if (url.protocol !== 'https:' || !url.hostname) error = '请输入有效的 HTTPS Webhook 地址。'; } catch { error = '地址格式不正确，请输入完整的 HTTPS 地址。'; } }
+      $('#notification-webhook-error').textContent = error;
+      $('#notification-webhook').setAttribute('aria-invalid',String(Boolean(error)));
+      const eventsError = config.enabled && !Object.values(config.events).some(Boolean) ? '启用通知时，请至少选择一种通知事件。' : '';
+      $('#notification-events-error').textContent = eventsError;
+      if (error) $('#notification-webhook').focus();
+      else if (eventsError) $('#notification-event-exception').focus();
+      return !error && !eventsError;
+    }
+    function notificationFormChanged(event) {
+      if (currentModalType !== 'notifications' || !event.target.closest('#notification-form')) return;
+      notificationTestVersion += 1;
+      if (event.target.id === 'notification-platform') {
+        $('#notification-secret').value = '';
+        $('#notification-secret-group').classList.toggle('hidden',!['dingtalk','feishu'].includes(event.target.value));
+      }
+      notificationDraft = readNotificationForm();
+      $('#notification-test').disabled = false;
+      $('#notification-test').removeAttribute('aria-busy');
+      $('#notification-test').innerHTML = `${icon('bell',15)}测试通知（模拟）`;
+      $('#notification-feedback').textContent = '更改尚未保存。配置仅保留在本页内存。';
+      $('#notification-summary-state').textContent = '尚未保存更改';
+      $('#notification-webhook-error').textContent = '';
+      $('#notification-webhook').setAttribute('aria-invalid','false');
+      $('#notification-events-error').textContent = '';
+    }
+    function testNotification() {
+      const config = readNotificationForm();
+      if (!validateNotificationForm(config)) return;
+      const version = ++notificationTestVersion;
+      const button = $('#notification-test');
+      button.disabled = true;
+      button.setAttribute('aria-busy','true');
+      button.innerHTML = `${icon('clock',15)}正在模拟测试…`;
+      $('#notification-feedback').textContent = '正在模拟通知投递；不会连接真实 Webhook。';
+      setTimeout(() => {
+        if (version !== notificationTestVersion || currentModalType !== 'notifications' || !$('#modal').open) return;
+        notificationLastTest = {platform:notificationPlatforms[config.platform],time:currentTime()};
+        button.disabled = false;
+        button.removeAttribute('aria-busy');
+        button.innerHTML = `${icon('bell',15)}再次测试（模拟）`;
+        updateNotificationSummary();
+        $('#notification-feedback').textContent = '模拟测试成功。未发送真实网络请求；当前输入仍需点击“保存设置”。';
+      },950);
+    }
+    function saveNotification(event) {
+      event.preventDefault();
+      const config = readNotificationForm();
+      if (!validateNotificationForm(config)) return;
+      notificationTestVersion += 1;
+      $('#notification-test').disabled = false;
+      $('#notification-test').removeAttribute('aria-busy');
+      $('#notification-test').innerHTML = `${icon('bell',15)}测试通知（模拟）`;
+      notificationSettings = {...config,events:{...config.events}};
+      notificationSaved = true;
+      notificationDraft = {...config,events:{...config.events}};
+      updateNotificationSummary();
+      $('#notification-feedback').textContent = '已保存到当前页面内存。刷新即清除；不会发送真实通知。';
+    }
+    function recordNotification(kind) {
+      if (!notificationSaved || !notificationSettings.enabled || !notificationSettings.events[kind]) return;
+      notificationLastEvent = {platform:notificationPlatforms[notificationSettings.platform],event:notificationEvents[kind],time:currentTime()};
+      updateNotificationSummary();
+    }
+
+    // Sending a request is separate from observing a new execution event.
+    function continueSession(session, automatic = false) {
+      if (!isRecoverable(session)) return;
+      if (automatic && (!globalMonitoring || !session.monitor || session.retries >= 5)) return;
+      session.retries += 1;
+      session.state = 'resuming';
+      session.step = '已发送，等待恢复确认';
+      const generation = (session.generation || 0) + 1;
+      session.generation = generation;
+      addEvent(session,`${automatic ? '自动' : '人工'}发送模拟续接，等待恢复确认`);
+      renderAll();
+      notify(`${session.name}：已发送，等待恢复确认（模拟）`);
+      setTimeout(() => {
+        if (session.generation !== generation || session.state !== 'resuming') return;
+        session.state = 'running';
+        session.step = '已恢复，继续执行剩余步骤';
+        session.remaining = 0;
+        addEvent(session,'收到新的执行事件，确认恢复运行（模拟）');
+        recordNotification('recovered');
+        renderAll();
+        notify(`${session.name}：已收到模拟执行事件，确认恢复。`);
+      },2400);
+    }
+
+    function openModal(type) {
+      currentModalType = type;
+      notificationTestVersion += 1;
+      const titles = {logs:'异常记录',policy:'重试策略',about:'关于这份界面预览',scenario:'选一种情景，看看变化',notifications:'让重要状态，及时抵达'};
+      $('#modal-title').textContent = titles[type];
+      $('#modal-eyebrow').textContent = {logs:'EXCEPTION JOURNAL',policy:'A CAREFUL RETRY POLICY',about:'DESIGN BEFORE IMPLEMENTATION',scenario:'TRY A DIFFERENT MOMENT',notifications:'NOTIFICATION SETTINGS / PREVIEW'}[type];
+      let content = '';
+      if (type === 'logs') {
+        const records = sessions.filter(session => isRecoverable(session) || session.state === 'resuming' || session.events.some(event => /中断|额度|模拟续接/.test(event[1])));
+        content = '<p class="modal-intro">本次预览中的模拟异常及续接记录。点击一条记录，可以回到对应会话。</p>' + (records.length ? records.map(session => `<button class="log-item" data-open-session="${session.id}" style="width:100%;text-align:left;${stateStyle(session.state)}"><span class="log-icon">${icon(states[session.state].icon,17)}</span><span><h3>${escapeHtml(session.name)} · ${states[session.state].label}</h3><p>${escapeHtml(session.events[0][1])}</p><small>14:${session.events[0][0]} · 续接 ${session.retries} 次 · 点击查看会话</small></span></button>`).join('') : '<div class="empty-state"><strong>暂时没有异常</strong>可通过情景演示查看异常恢复过程。</div>');
+      }
+      if (type === 'policy') content = '<p class="modal-intro">以下是原型采用的示例策略，用来讨论行为与界面。所有倒计时和执行事件均为本地模拟。</p><div class="policy-grid"><section class="policy"><h3>'+icon('network',17)+'网络异常</h3><p>等待 <code>30 秒</code> 后自动续接，最多 <strong>5 次</strong>。每次只发送一个请求；收到新的执行事件才确认恢复。当前演示首次续接会模拟成功。</p></section><section class="policy"><h3>'+icon('clock',17)+'额度限制</h3><p>等待示例重置时间 <code>5 分钟</code>。正式产品需要以可验证的额度重置信息为准；此处倒计时仅用于演示。</p></section><section class="policy"><h3>'+icon('retry',17)+'内部重试</h3><p>Codex 已在重试时，面板保持观察，<strong>不会重复发送继续指令</strong>。全局或单会话监控关闭后，自动续接倒计时冻结；人工“立即继续”仍可操作。</p></section><section class="policy policy-safe"><h3>'+icon('lock',17)+'始终保留人工决定</h3><p><strong>等待用户批准、用户主动停止、正常完成</strong>均不自动续接。此原型不会批准操作、修改真实会话或连接真实服务。</p></section></div>';
+      if (type === 'about') content = '<p class="modal-intro">这是为 Windows 桌面程序设计的可点击视觉原型。目标技术为 <strong>.NET Framework 4.8 + WPF</strong>，当前文件使用 HTML 演示布局与交互。</p><div class="policy-grid"><section class="policy"><h3>'+icon('grid',17)+'先看清楚，再做决定</h3><p>可测试会话筛选、搜索、监控开关、异常情景、人工续接和恢复确认。左侧异常记录与重试策略也可打开查看。</p></section><section class="policy"><h3>'+icon('flow',17)+'观察恢复，而非假定恢复</h3><p>点击“立即继续”后，界面先显示“已发送，等待恢复确认”，约 2.4 秒后模拟产生新的执行事件，才将状态切换为“执行中”。</p></section></div><div class="demo-disclaimer">界面预览 · 模拟数据<br>所有会话名称、事件、倒计时和状态均为虚构。此文件无外部网络依赖，未读取本机 Codex、文件、凭据或真实会话。它用于确认界面设计，不代表已经实现 WPF 程序或真实监控能力。</div>';
+      if (type === 'scenario') content = `<p class="modal-intro">将“${escapeHtml(selected().name)}”切换为以下模拟情景。不会影响任何真实会话。</p><div class="scenario-grid">${['running','retry','network','quota','approval','complete','stopped'].map(state => `<button class="scenario-option" data-scenario="${state}" style="${stateStyle(state)}"><span class="mini-art">${illustration(state,true)}</span><span><strong>${states[state].label}</strong><small>${states[state].note}</small></span></button>`).join('')}</div><div class="demo-disclaimer">网络失败默认 30 秒后自动模拟续接；额度等待默认 5 分钟。可先暂停全局监控，再体验人工“立即继续”。</div>`;
+      if (type === 'notifications') content = notificationMarkup();
+      $('#modal-body').innerHTML = content;
+      $('#modal-close').innerHTML = icon('close',17);
+      $('#modal').showModal();
+      if (type === 'notifications') {
+        loadNotificationForm();
+        $('#notification-form').addEventListener('submit',saveNotification);
+      }
+    }
+
+    $('#session-list').addEventListener('click',event => {
+      const toggle = event.target.closest('[data-monitor]');
+      const selection = event.target.closest('[data-select]');
+      if (toggle) {
+        const session = sessions.find(item => item.id === toggle.dataset.monitor);
+        session.monitor = !session.monitor;
+        renderAll();
+        notify(`${session.name}：${session.monitor ? '已开启模拟监控' : '已暂停自动续接'}。`);
+      } else if (selection) { selectedId = selection.dataset.select; renderAll(); }
+    });
+    $('.filters').addEventListener('click',event => {
+      const button = event.target.closest('[data-filter]');
+      if (button) { activeFilter = button.dataset.filter; preserveFocus(() => {renderList();renderCounts();}); }
+    });
+    $('#search').addEventListener('input',renderList);
+    $('#clear-search').addEventListener('click',() => { $('#search').value = ''; renderList(); $('#search').focus(); });
+    $('#global-control').addEventListener('click',() => {
+      globalMonitoring = !globalMonitoring;
+      renderAll();
+      notify(globalMonitoring ? '模拟监控已恢复，自动续接倒计时继续。' : '模拟监控已暂停。自动续接倒计时冻结，仍可人工继续。');
+    });
+    $('#inspector').addEventListener('click',event => {
+      if (event.target.closest('#continue-session')) continueSession(selected());
+      if (event.target.closest('#scenario-open')) openModal('scenario');
+    });
+    $$('.rail-button[data-modal]').forEach(button => button.addEventListener('click',() => openModal(button.dataset.modal)));
+    $('#nav-sessions').addEventListener('click',() => { if ($('#modal').open) $('#modal').close(); $('#session-workspace').scrollIntoView({block:'start',behavior:'smooth'}); });
+    $('#modal-close').addEventListener('click',() => $('#modal').close());
+    $('#notification-status').addEventListener('click',() => openModal('notifications'));
+    $('#modal').addEventListener('close',() => { notificationTestVersion += 1; currentModalType = ''; });
+    $('#modal-body').addEventListener('input',notificationFormChanged);
+    $('#modal-body').addEventListener('change',notificationFormChanged);
+    $('#modal').addEventListener('click',event => { if (event.target === $('#modal')) { const bounds = $('#modal').getBoundingClientRect(); if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) $('#modal').close(); } });
+    $('#modal-body').addEventListener('click',event => {
+      if (event.target.closest('#notification-enabled')) {
+        const button = $('#notification-enabled');
+        button.setAttribute('aria-checked',String(button.getAttribute('aria-checked') !== 'true'));
+        notificationFormChanged({target:button});
+        return;
+      }
+      if (event.target.closest('#notification-test')) { testNotification(); return; }
+      const record = event.target.closest('[data-open-session]');
+      if (record) { selectedId = record.dataset.openSession; $('#modal').close(); renderAll(); return; }
+      const option = event.target.closest('[data-scenario]');
+      if (!option) return;
+      const session = selected();
+      session.generation = (session.generation || 0) + 1;
+      session.state = option.dataset.scenario;
+      session.exhaustedNotified = false;
+      session.retries = session.state === 'network' ? 2 : 0;
+      session.remaining = session.state === 'network' ? 30 : session.state === 'quota' ? 300 : 0;
+      session.monitor = !['complete','stopped'].includes(session.state);
+      session.step = states[session.state].micro;
+      session.events = [[currentTime().slice(3),`已切换到“${states[session.state].label}”演示情景`]];
+      if (isRecoverable(session)) recordNotification('exception');
+      $('#modal').close();
+      renderAll();
+      notify(`已切换模拟情景：${states[session.state].label}。`);
+    });
+    document.addEventListener('keydown',event => {
+      if (event.key === '/' && !$('#modal').open && !['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) { event.preventDefault(); $('#search').focus(); }
+    });
+
+    // Update timer text in place to keep focus and list animations stable.
+    setInterval(() => {
+      demoSeconds += 1;
+      $('#demo-clock').textContent = `演示时间 ${currentTime()}`;
+      sessions.forEach(session => {
+        if (isRecoverable(session) && session.retries >= 5 && !session.exhaustedNotified) { session.exhaustedNotified = true; recordNotification('exhausted'); }
+        if (isRecoverable(session) && globalMonitoring && session.monitor && session.retries < 5) {
+          session.remaining = Math.max(0,session.remaining - 1);
+          if (session.remaining === 0) continueSession(session,true);
+        }
+        const timer = $(`[data-row-timer="${session.id}"]`);
+        if (timer) timer.textContent = rowLabel(session);
+      });
+      if ($('#next-retry')) $('#next-retry').textContent = nextLabel(selected());
+    },1000);
+    renderAll();
+  </script>
+</body>
+</html>

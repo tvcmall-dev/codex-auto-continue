@@ -14,6 +14,7 @@ sessions and does not send messages to Codex.
 - Native WPF interface with MVVM, vector state illustrations, and a system tray.
 - Multiple-session overview, individual monitoring switches, and an event timeline.
 - Retry scheduling and recovery history persisted locally in SQLite.
+- Configurable notifications to DingTalk, Feishu, WeCom, or a generic webhook.
 - Automatic continuation only after a confirmed terminal, recoverable failure.
 - Explicit distinction between a queued message and confirmed recovery.
 
@@ -23,8 +24,10 @@ Open [the interactive dashboard](docs/prototypes/dashboard.html) in a browser.
 It is a visual proposal for the native WPF application, not a web-based runtime
 dependency. It requires no package installation or external services.
 
-The preview demonstrates session selection, search, filters, monitoring controls,
-and a simulated continuation followed by recovery confirmation. Its status
+The dark-themed preview demonstrates session selection, search, filters,
+monitoring controls, notification settings, and simulated continuation followed
+by recovery confirmation. Webhook tests are simulated and send no network
+requests. Entered settings live in memory only. Its status
 illustrations use inline vectors, so they can be recreated with native WPF
 geometry and drawing resources.
 

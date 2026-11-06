@@ -22,4 +22,5 @@ appsettings.local.json
 .superpowers/
 .playwright-cli/
 output/
+dist/
 node_modules/

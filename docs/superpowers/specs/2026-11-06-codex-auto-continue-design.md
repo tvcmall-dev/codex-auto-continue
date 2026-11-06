@@ -2,9 +2,10 @@
 
 Date: 2026-11-06
 
-Status: proposed. The Windows/WPF technology choice is requested by the user.
-The interaction preview and the live-integration acceptance gate remain subject
-to review. This document does not assert that desktop connectivity works yet.
+Status: implemented as a runnable net48 WPF preview after the user approved
+development on 2026-11-06. Real desktop-owned SQLite projection reads are verified;
+the full live-resume acceptance gate remains unmet on the current stdio-only
+desktop backend. See the Chinese README and usage guide for current limitations.
 
 ## Objective
 

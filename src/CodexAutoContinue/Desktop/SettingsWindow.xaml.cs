@@ -5,6 +5,7 @@ using System.Web.Script.Serialization;
 using System.Windows;
 using System.Windows.Controls;
 using CodexAutoContinue.Core;
+using CodexAutoContinue.Updating;
 
 namespace CodexAutoContinue.Desktop
 {
@@ -12,10 +13,12 @@ namespace CodexAutoContinue.Desktop
     {
         private readonly IApplicationService service;
         private readonly AppSettings original;
-        private bool loaded;
-        public SettingsWindow(IApplicationService service, int tab = 0)
+        private readonly IUpdateService updates;
+        private bool loaded, closed;
+        public SettingsWindow(IApplicationService service, int tab = 0, IUpdateService updates = null)
         {
             this.service = service;
+            this.updates = updates;
             var json = new JavaScriptSerializer();
             original = json.Deserialize<AppSettings>(json.Serialize(service.Settings));
             InitializeComponent();
@@ -33,6 +36,9 @@ namespace CodexAutoContinue.Desktop
             PollSeconds.Text = original.PollSeconds.ToString(CultureInfo.InvariantCulture);
             StartWithWindows.IsChecked = original.StartWithWindows;
             CloseToTray.IsChecked = original.CloseToTray;
+            AutoCheckUpdates.IsChecked = original.AutoCheckUpdates;
+            AutoInstallUpdates.IsChecked = original.AutoInstallUpdates;
+            IncludePrereleaseUpdates.IsChecked = original.IncludePrereleaseUpdates;
             var n = original.Notifications ?? new NotificationSettings();
             DingTalkProvider.IsChecked = n.Provider == "DingTalk";
             FeishuProvider.IsChecked = n.Provider == "Feishu";
@@ -51,6 +57,9 @@ namespace CodexAutoContinue.Desktop
             loaded = true;
             UpdateReplyPreview();
             UpdateProviderFields();
+            if (updates != null) updates.Changed += OnUpdateChanged;
+            Closed += (s, e) => { closed = true; if (updates != null) updates.Changed -= OnUpdateChanged; };
+            UpdateUpdateStatus();
         }
         private void ReplyChanged(object sender, RoutedEventArgs e) { if (loaded) UpdateReplyPreview(); }
         private void CustomChanged(object sender, TextChangedEventArgs e) { if (loaded) UpdateReplyPreview(); }
@@ -93,6 +102,9 @@ namespace CodexAutoContinue.Desktop
                 result.CliPath = CliPath.Text.Trim();
                 result.CloseToTray = CloseToTray.IsChecked == true;
                 result.StartWithWindows = StartWithWindows.IsChecked == true;
+                result.AutoCheckUpdates = AutoCheckUpdates.IsChecked == true;
+                result.AutoInstallUpdates = AutoInstallUpdates.IsChecked == true;
+                result.IncludePrereleaseUpdates = IncludePrereleaseUpdates.IsChecked == true;
             }
             result.Notifications = new NotificationSettings
             {
@@ -126,5 +138,46 @@ namespace CodexAutoContinue.Desktop
             finally { TestButton.IsEnabled = true; SaveButton.IsEnabled = true; }
         }
         private void CancelClick(object sender, RoutedEventArgs e) { DialogResult = false; }
+        private void OnUpdateChanged()
+        {
+            if (!closed && !Dispatcher.HasShutdownStarted) Dispatcher.BeginInvoke(new Action(() => { if (!closed) UpdateUpdateStatus(); }));
+        }
+        private void UpdateUpdateStatus()
+        {
+            CurrentVersion.Text = updates == null ? System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString(3) : updates.CurrentVersion;
+            AvailableVersion.Text = string.IsNullOrWhiteSpace(updates?.AvailableVersion) ? "尚未发现新版本" : updates.AvailableVersion;
+            UpdateStatus.Text = updates?.StatusText ?? "启动验证模式未运行自动升级服务。";
+            UpdateProgress.Value = Math.Max(0, Math.Min(100, updates?.Progress ?? 0));
+            UpdateProgress.Visibility = updates != null && (updates.IsBusy || updates.IsReady) ? Visibility.Visible : Visibility.Collapsed;
+            CheckUpdateButton.IsEnabled = updates != null && !updates.IsBusy;
+            InstallUpdateButton.IsEnabled = updates != null && updates.IsReady && !updates.IsBusy;
+        }
+        private async void CheckUpdatesClick(object sender, RoutedEventArgs e)
+        {
+            if (updates == null) return;
+            CheckUpdateButton.IsEnabled = false;
+            try { await updates.CheckAsync(true); }
+            catch { if (!closed) Feedback.Text = "检查更新暂不可用，请稍后重试。"; }
+            finally { if (!closed) UpdateUpdateStatus(); }
+        }
+        private async void InstallUpdateClick(object sender, RoutedEventArgs e)
+        {
+            if (updates == null || !updates.IsReady) return;
+            InstallUpdateButton.IsEnabled = false; SaveButton.IsEnabled = false;
+            try
+            {
+                await service.SaveSettingsAsync(ReadSettings(true));
+                var dispatcher = Dispatcher;
+                var owner = Owner;
+                DialogResult = true;
+                _ = dispatcher.BeginInvoke(new Action(async () =>
+                {
+                    try { await updates.InstallAsync(); }
+                    catch { if (!dispatcher.HasShutdownStarted) MessageBox.Show(owner, "升级未能启动，请在应用升级中查看状态后重试。", "应用升级", MessageBoxButton.OK, MessageBoxImage.Information); }
+                }));
+            }
+            catch (Exception error) { Feedback.Text = error.Message; }
+            finally { if (!closed) { SaveButton.IsEnabled = true; UpdateUpdateStatus(); } }
+        }
     }
 }

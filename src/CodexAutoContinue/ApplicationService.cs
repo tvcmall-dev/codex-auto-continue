@@ -8,11 +8,12 @@ using CodexAutoContinue.Core;
 using CodexAutoContinue.Infrastructure;
 using CodexAutoContinue.Integration;
 using CodexAutoContinue.Notifications;
+using CodexAutoContinue.Updating;
 using Microsoft.Win32;
 
 namespace CodexAutoContinue
 {
-    public sealed class ApplicationService : IApplicationService
+    public sealed class ApplicationService : IApplicationService, IUpdateHost
     {
         private readonly object sync = new object();
         private readonly SemaphoreSlim gate = new SemaphoreSlim(1, 1);
@@ -28,6 +29,8 @@ namespace CodexAutoContinue
         private AppSettings settings;
         private Task notifications = Task.CompletedTask;
         private bool disposed;
+        private volatile bool maintenance;
+        private int activeWebhookTests;
         public event Action Changed;
         public string DataDirectory { get; private set; }
         public string ConnectionStatus { get; private set; } = "等待连接本地 Codex 数据。";
@@ -58,9 +61,10 @@ namespace CodexAutoContinue
         }
         public async Task RefreshAsync()
         {
-            if (disposed || !await gate.WaitAsync(0)) return;
+            if (disposed || maintenance || !await gate.WaitAsync(0)) return;
             try
             {
+                if (disposed || maintenance) return;
                 var result = await reader.ReadAsync(Settings);
                 ApplyResult(result);
                 if (result.Available)
@@ -159,6 +163,7 @@ namespace CodexAutoContinue
             await gate.WaitAsync();
             try
             {
+                lock (sync) ThrowIfUpdating();
                 var check = await reader.ReadAsync(Settings); ApplyResult(check);
                 if (!check.Available) throw new InvalidOperationException("当前无法读取会话状态，已取消发送。");
                 lock (sync) if (!sessions.ContainsKey(threadId)) throw new InvalidOperationException("没有找到该会话。");
@@ -171,6 +176,7 @@ namespace CodexAutoContinue
         {
             lock (sync)
             {
+                ThrowIfUpdating();
                 SessionRecord session; if (!sessions.TryGetValue(threadId, out session)) return;
                 session.Monitoring = enabled;
                 store.SaveSessions(sessions.Values);
@@ -179,11 +185,12 @@ namespace CodexAutoContinue
         }
         public void SetGlobalMonitoring(bool enabled)
         {
-            lock (sync) { var copy = Json.Clone(settings); copy.GlobalMonitoring = enabled; settingsStore.Save(copy); settings = copy; }
+            lock (sync) { ThrowIfUpdating(); var copy = Json.Clone(settings); copy.GlobalMonitoring = enabled; settingsStore.Save(copy); settings = copy; }
             Changed?.Invoke();
         }
         public async Task SaveSettingsAsync(AppSettings value)
         {
+            lock (sync) ThrowIfUpdating();
             ValidateSettings(value);
             await gate.WaitAsync();
             try
@@ -191,6 +198,7 @@ namespace CodexAutoContinue
                 var copy = Json.Clone(value); copy.CustomMessage = (copy.CustomMessage ?? "").Trim();
                 lock (sync)
                 {
+                    ThrowIfUpdating();
                     if (!string.Equals(Path.GetFullPath(copy.CodexHome), Path.GetFullPath(settings.CodexHome), StringComparison.OrdinalIgnoreCase))
                         foreach (var session in sessions.Values)
                         {
@@ -208,9 +216,48 @@ namespace CodexAutoContinue
         }
         public async Task<string> TestWebhookAsync(AppSettings value)
         {
-            WebhookClient.Validate(value.Notifications);
-            var result = await webhooks.SendAsync(value.Notifications, new Notice { Event = "test", Title = "连接测试", State = "测试", Reason = "这是一条手动测试通知，不包含会话内容。", ThreadId = "test" });
-            NotificationStatus = result.Message; Changed?.Invoke(); return result.Message;
+            lock (sync)
+            {
+                ThrowIfUpdating();
+                WebhookClient.Validate(value.Notifications);
+                activeWebhookTests++;
+            }
+            try
+            {
+                var result = await webhooks.SendAsync(value.Notifications, new Notice { Event = "test", Title = "连接测试", State = "测试", Reason = "这是一条手动测试通知，不包含会话内容。", ThreadId = "test" });
+                NotificationStatus = result.Message; Changed?.Invoke(); return result.Message;
+            }
+            finally { lock (sync) activeWebhookTests--; }
+        }
+        public async Task<bool> TryPauseForUpdateAsync()
+        {
+            if (disposed || !await gate.WaitAsync(0)) return false;
+            try
+            {
+                lock (sync)
+                {
+                    if (disposed) return false;
+                    if (maintenance) return true;
+                    // Startup clears failure freshness, so active recovery schedules must finish first.
+                    if (!notifications.IsCompleted || activeWebhookTests != 0 ||
+                        settings.GlobalMonitoring && sessions.Values.Any(session => session.Monitoring && session.FreshFailure &&
+                            session.NextRetryUtc.HasValue && (session.State == SessionState.NetworkFailure || session.State == SessionState.QuotaWait))) return false;
+                    // Persist uncertain deliveries before preventing any new work and exiting.
+                    store.SaveSessions(sessions.Values);
+                    maintenance = true;
+                    return true;
+                }
+            }
+            finally { gate.Release(); }
+        }
+        public void ResumeAfterUpdateFailure()
+        {
+            lock (sync) maintenance = false;
+            Changed?.Invoke();
+        }
+        private void ThrowIfUpdating()
+        {
+            if (maintenance) throw new InvalidOperationException("应用正在升级，请稍后再执行此操作。");
         }
         private static void ValidateSettings(AppSettings value)
         {

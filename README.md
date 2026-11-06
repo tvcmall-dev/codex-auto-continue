@@ -1,12 +1,12 @@
 # Codex Auto Continue（Codex 自动续接）
 
-面向 Windows 的 Codex 桌面辅助程序，提供暗黑会话面板、可恢复异常的续接调度和 Webhook 通知。
+面向 Windows 的 Codex 桌面辅助程序，提供暗黑会话面板、可恢复异常的续接调度、Webhook 通知和自动升级。
 
-**当前版本：0.1.0-preview，可运行的原生 WPF 测试版。** 已实现本机 Codex Desktop 会话读取、恢复策略、消息发送器、通知、持久化与 EXE 打包。**当前机器的桌面后端没有暴露已验证的控制端点，因此尚未验证桌面任务能够自动恢复，不能保证无人值守续跑。** CLI 接受消息只会显示“待确认”，观察到真实执行后才确认恢复。
+**当前版本：0.2.0-preview，可运行的原生 WPF 测试版。** 已实现本机 Codex Desktop 会话读取、恢复策略、消息发送器、通知、持久化、EXE 打包与空闲自动升级。**当前机器的桌面后端没有暴露已验证的控制端点，因此尚未验证桌面任务能够自动恢复，不能保证无人值守续跑。** CLI 接受消息只会显示“待确认”，观察到真实执行后才确认恢复。
 
 ## 运行与构建
 
-[下载便携 ZIP](https://github.com/tvcmall-dev/codex-auto-continue/releases/download/v0.1.0-preview/CodexAutoContinue-0.1.0-preview-win-x64.zip) · [单独下载 EXE](https://github.com/tvcmall-dev/codex-auto-continue/releases/download/v0.1.0-preview/CodexAutoContinue.exe) · [版本说明与校验值](https://github.com/tvcmall-dev/codex-auto-continue/releases/tag/v0.1.0-preview)
+[下载便携 ZIP](https://github.com/tvcmall-dev/codex-auto-continue/releases/download/v0.2.0-preview/CodexAutoContinue-0.2.0-preview-win-x64.zip) · [单独下载 EXE](https://github.com/tvcmall-dev/codex-auto-continue/releases/download/v0.2.0-preview/CodexAutoContinue.exe) · [版本说明与校验值](https://github.com/tvcmall-dev/codex-auto-continue/releases/tag/v0.2.0-preview)
 
 - Windows 10/11 x64，.NET Framework 4.8。
 - 便携包解压后运行 `CodexAutoContinue.exe`，无需管理员权限。
@@ -30,8 +30,19 @@
 - 发送前持久化并重新检查目标；不确定的投递保持待确认，重启后核对实际终态，防止重复消息。
 - 钉钉、飞书、企业微信和通用 Webhook；支持平台签名、真实手动测试、事件订阅、去重与最多 3 次投递。
 - SQLite 保存状态与历史；完整 Webhook URL 和密钥使用 Windows 当前用户 DPAPI 加密。
+- 启动及每 6 小时检查新版本，自动下载并校验 SHA-256，程序空闲时重启安装，启动检查失败时回退。
 
 ![续接消息设置](docs/images/settings-wpf.png)
+
+## 自动升级
+
+**0.1.0-preview 尚无自动升级能力，需要先手动安装一次 0.2.0-preview。** 从托盘退出旧程序后，将新 EXE 或解压后的便携包覆盖到原目录；设置和监控记录保存在用户数据目录，可继续使用。
+
+新版本默认启用自动检查、自动下载和空闲安装，只从固定的 [tvcmall-dev/codex-auto-continue GitHub Releases](https://github.com/tvcmall-dev/codex-auto-continue/releases) 获取更新。启动时检查一次，运行期间每 6 小时检查一次；下载通过 SHA-256、文件大小及程序版本校验后才等待安装。默认接收预览版，可在“设置 → 应用升级”改为只接收正式版，也可关闭自动检查或自动安装。希望完全手动控制时，关闭这两个开关并保存。
+
+打开设置、刷新会话、发送消息、投递通知或测试 Webhook 时会延迟重启；全局与会话监控均开启且仍有待续接计划时，即使计划尚未到时间，也会等待。待确认的投递状态会保存，重启后继续核对，避免重复发送。
+
+安装只替换程序 EXE，在原目录保留 `CodexAutoContinue.exe.previous` 作为上一版本备份。新进程需在 20 秒内通过启动检查，否则尝试回退并重启上一版本；失败版本进入 24 小时自动升级冷却期。检查或下载失败不影响监控，可在升级页手动重试。程序目录需可写，不会请求管理员权限。详细操作与故障恢复见[使用说明](docs/使用说明.md)。
 
 ## 真实接入边界
 
@@ -47,9 +58,12 @@
 dotnet build tests/CodexAutoContinue.Tests/CodexAutoContinue.Tests.csproj -c Release
 .\tests\CodexAutoContinue.Tests\bin\Release\net48\CodexAutoContinue.Tests.exe
 .\src\CodexAutoContinue\bin\Release\net48\CodexAutoContinue.exe --smoke-test
+powershell.exe -NoProfile -File .\tests\Verify-UpdateIntegration.ps1
 ```
 
-测试包括恢复状态机、真实格式数据库读取、发送前重查、防重复与重启核对、消息指纹、DPAPI、SQLite、平台签名和 HTTP 200 业务失败。Webhook 自动测试使用内存 HTTP 处理器，不向真实机器人投递；真实测试通知由用户在设置中主动触发。
+测试包括恢复状态机、真实格式数据库读取、发送前重查、防重复与重启核对、消息指纹、DPAPI、SQLite、平台签名和 HTTP 200 业务失败，也覆盖版本选择、下载完整性、空闲升级条件、EXE 替换与回退。Webhook 自动测试使用内存 HTTP 处理器，不向真实机器人投递；真实测试通知由用户在设置中主动触发。
+
+独立进程升级验证需要 64 位 Windows PowerShell 5.1，并要求先退出正在运行的本程序。脚本在临时目录创建隔离安装，验证真实 WPF 启动回执、备份、失败回退、24 小时冷却及设置/SQLite 数据保留；仅清理本次测试创建的进程和文件。
 
 ## 项目结构
 
@@ -60,6 +74,7 @@ dotnet build tests/CodexAutoContinue.Tests/CodexAutoContinue.Tests.csproj -c Rel
 | `src/CodexAutoContinue/Integration` | 本地读取与 CLI 投递 |
 | `src/CodexAutoContinue/Infrastructure` | SQLite、DPAPI 设置与状态持久化 |
 | `src/CodexAutoContinue/Notifications` | 平台消息与签名 |
+| `src/CodexAutoContinue/Updating` | 固定来源检查、下载校验、空闲安装与回退 |
 | `tests/CodexAutoContinue.Tests` | 无外部服务依赖的行为测试 |
 
 最初的[交互原型](docs/prototypes/dashboard.html)保留为设计参考，使用虚构数据，正式程序不依赖浏览器。[设计方案](docs/superpowers/specs/2026-11-06-codex-auto-continue-design.md)记录了策略与接入验收要求。

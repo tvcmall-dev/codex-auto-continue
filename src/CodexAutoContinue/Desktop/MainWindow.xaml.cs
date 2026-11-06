@@ -12,6 +12,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using CodexAutoContinue.Core;
+using CodexAutoContinue.Updating;
 using Forms = System.Windows.Forms;
 
 namespace CodexAutoContinue.Desktop
@@ -19,17 +20,19 @@ namespace CodexAutoContinue.Desktop
     public partial class MainWindow : Window
     {
         private readonly IApplicationService service;
+        private readonly IUpdateService updates;
         private readonly ObservableCollection<SessionItem> items = new ObservableCollection<SessionItem>();
         private readonly ICollectionView view;
         private readonly DispatcherTimer clock = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         private readonly Forms.NotifyIcon tray;
         private readonly System.Drawing.Icon trayIcon;
-        private bool refreshing, exiting;
-        private int tick;
+        private bool refreshing, exiting, continuing, updateTickRunning;
+        private int tick, updateTick;
         private string filter = "all";
-        public MainWindow(IApplicationService service)
+        public MainWindow(IApplicationService service, IUpdateService updates = null)
         {
             this.service = service;
+            this.updates = updates;
             InitializeComponent();
             Width = Math.Max(MinWidth, Math.Min(Width, SystemParameters.WorkArea.Width - 24));
             Height = Math.Max(MinHeight, Math.Min(Height, SystemParameters.WorkArea.Height - 24));
@@ -48,11 +51,53 @@ namespace CodexAutoContinue.Desktop
             tray.ContextMenuStrip = menu;
             tray.DoubleClick += (s, e) => Dispatcher.BeginInvoke(new Action(ShowFromTray));
             service.Changed += OnServiceChanged;
-            clock.Tick += async (s, e) => { ClockText.Text = DateTime.Now.ToString("yyyy.MM.dd  HH:mm:ss"); UpdateDetails(); if (++tick >= Math.Max(1, service.Settings.PollSeconds)) { tick = 0; await RefreshNowAsync(); } };
-            Loaded += async (s, e) => { clock.Start(); await RefreshNowAsync(); };
+            if (updates != null)
+            {
+                updates.Changed += OnUpdateChanged;
+                updates.IsUiIdle = () => ReadUiValue(() => IsLoaded && !exiting && !refreshing && !continuing && OwnedWindows.Count == 0);
+                updates.IsWindowVisible = () => ReadUiValue(() => IsVisible && WindowState != WindowState.Minimized);
+                updates.RestartRequested = () => { if (!Dispatcher.HasShutdownStarted) Dispatcher.BeginInvoke(new Action(ExitApplication)); };
+            }
+            clock.Tick += ClockTick;
+            Loaded += async (s, e) => { clock.Start(); await RefreshNowAsync(); if (updates != null) await CheckUpdatesAsync(); };
             Closing += OnClosing;
-            Closed += (s, e) => { clock.Stop(); service.Changed -= OnServiceChanged; tray.Visible = false; tray.Dispose(); trayIcon.Dispose(); };
+            Closed += (s, e) =>
+            {
+                clock.Stop(); service.Changed -= OnServiceChanged;
+                if (updates != null) { updates.Changed -= OnUpdateChanged; updates.IsUiIdle = null; updates.IsWindowVisible = null; updates.RestartRequested = null; }
+                tray.Visible = false; tray.Dispose(); trayIcon.Dispose();
+            };
             UpdateView();
+            UpdateUpdateStatus();
+        }
+        private bool ReadUiValue(Func<bool> read)
+        {
+            if (Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished) return false;
+            return Dispatcher.CheckAccess() ? read() : Dispatcher.Invoke(read);
+        }
+        private async void ClockTick(object sender, EventArgs e)
+        {
+            ClockText.Text = DateTime.Now.ToString("yyyy.MM.dd  HH:mm:ss");
+            UpdateDetails();
+            if (++tick >= Math.Max(1, service.Settings.PollSeconds)) { tick = 0; await RefreshNowAsync(); }
+            if (updates == null || ++updateTick < 30 || updateTickRunning) return;
+            updateTick = 0; updateTickRunning = true;
+            try { await updates.TickAsync(); }
+            catch { UpdateStatusButton.Content = "升级检查暂不可用"; }
+            finally { updateTickRunning = false; }
+        }
+        private async Task CheckUpdatesAsync()
+        {
+            try { await updates.CheckAsync(false); }
+            catch { UpdateStatusButton.Content = "升级检查暂不可用"; }
+        }
+        private void OnUpdateChanged() { if (!Dispatcher.HasShutdownStarted) Dispatcher.BeginInvoke(new Action(UpdateUpdateStatus)); }
+        private void UpdateUpdateStatus()
+        {
+            if (updates == null) { UpdateStatusButton.Content = "应用升级"; UpdateStatusButton.ToolTip = "打开应用升级设置"; return; }
+            string status = updates.StatusText ?? "等待检查更新";
+            UpdateStatusButton.Content = updates.IsReady ? "新版本已就绪 · " + updates.AvailableVersion : updates.IsBusy ? "应用升级 · " + Math.Max(0, updates.Progress) + "%" : "v" + updates.CurrentVersion + " · 应用升级";
+            UpdateStatusButton.ToolTip = status;
         }
         public async Task RefreshNowAsync()
         {
@@ -157,7 +202,8 @@ namespace CodexAutoContinue.Desktop
         private void PolicyClick(object sender, RoutedEventArgs e) { OpenSettings(0); }
         private void NotificationsClick(object sender, RoutedEventArgs e) { OpenSettings(1); }
         private void ConnectionClick(object sender, RoutedEventArgs e) { OpenSettings(2); }
-        private void OpenSettings(int tab) { var window = new SettingsWindow(service, tab) { Owner = this }; window.ShowDialog(); UpdateView(); }
+        private void UpdateClick(object sender, RoutedEventArgs e) { OpenSettings(3); }
+        private void OpenSettings(int tab) { var window = new SettingsWindow(service, tab, updates) { Owner = this }; window.ShowDialog(); UpdateView(); UpdateUpdateStatus(); }
         private void GlobalClick(object sender, RoutedEventArgs e) { service.SetGlobalMonitoring(!service.Settings.GlobalMonitoring); UpdateView(); }
         private void SessionMonitoringClick(object sender, RoutedEventArgs e)
         {
@@ -169,9 +215,11 @@ namespace CodexAutoContinue.Desktop
         {
             var item = SessionList.SelectedItem as SessionItem;
             if (item == null) return;
+            continuing = true;
             ContinueButton.IsEnabled = false;
             try { await service.ContinueAsync(item.ThreadId); }
             catch (Exception error) { MessageBox.Show(this, error.Message, "无法续接", MessageBoxButton.OK, MessageBoxImage.Information); }
+            finally { continuing = false; }
             UpdateView();
         }
         private void DataFolderClick(object sender, RoutedEventArgs e)

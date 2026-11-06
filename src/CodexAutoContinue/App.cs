@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -9,6 +8,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using CodexAutoContinue.Core;
 using CodexAutoContinue.Desktop;
+using CodexAutoContinue.Updating;
 
 namespace CodexAutoContinue
 {
@@ -18,18 +18,23 @@ namespace CodexAutoContinue
         public static int Main(string[] args)
         {
             args = args ?? new string[0];
+            int workerResult;
+            if (UpdateWorker.TryRun(args, out workerResult)) return workerResult;
             bool automated = args.Contains("--smoke-test") || args.Contains("--screenshot") || args.Contains("--settings-screenshot");
+            bool updateStartup = args.Contains("--update-health");
             string temporaryDirectory = null;
-            bool created;
-            string user = WindowsIdentity.GetCurrent().User?.Value ?? Environment.UserName;
-            using (var instance = new Mutex(true, "Local\\CodexAutoContinue-" + user, out created))
+            using (var instance = new Mutex(false, UpdateWorker.MutexName))
             {
-                if (!created)
+                bool ownsInstance;
+                try { ownsInstance = instance.WaitOne(0); }
+                catch (AbandonedMutexException) { ownsInstance = true; }
+                if (!ownsInstance)
                 {
-                    if (automated) { Console.Error.WriteLine("Desktop verification cannot run while another instance is open."); return 2; }
+                    if (automated || updateStartup) { Console.Error.WriteLine("Desktop startup cannot run while another instance is open."); return 2; }
                     MessageBox.Show("Codex 续航已在运行，请从系统托盘打开面板。", "Codex 续航"); return 0;
                 }
                 IApplicationService service = null;
+                IUpdateService updates = null;
                 try
                 {
                     var app = new App { ShutdownMode = ShutdownMode.OnMainWindowClose };
@@ -44,13 +49,14 @@ namespace CodexAutoContinue
                         directory = temporaryDirectory;
                     }
                     service = new ApplicationService(directory);
-                    var window = new MainWindow(service);
+                    if (!automated) updates = new UpdateService(service, (IUpdateHost)service);
+                    var window = new MainWindow(service, updates);
                     app.MainWindow = window;
                     int exitCode = 0;
                     app.DispatcherUnhandledException += (s, e) =>
                     {
                         e.Handled = true;
-                        if (automated) { exitCode = 1; Console.Error.WriteLine("Desktop smoke test failed: " + e.Exception.GetType().Name); window.ExitApplication(); }
+                        if (automated || updateStartup) { exitCode = 1; Console.Error.WriteLine("Desktop startup failed: " + e.Exception.GetType().Name); window.ExitApplication(); }
                         else MessageBox.Show(window, "操作未能完成，请检查连接与设置后重试。", "Codex 续航", MessageBoxButton.OK, MessageBoxImage.Information);
                     };
                     if (automated)
@@ -72,24 +78,30 @@ namespace CodexAutoContinue
                         };
                     }
                     else if (args.Contains("--tray")) window.Loaded += (s, e) => window.Hide();
+                    if (updateStartup)
+                    {
+                        var receipt = ArgumentValue(args, "--update-health");
+                        window.Loaded += async (s, e) => { await Task.Delay(2000); UpdateWorker.WriteStartupReceipt(receipt); };
+                    }
                     app.Run(window);
                     return exitCode;
                 }
                 catch (Exception error)
                 {
-                    if (automated) { Console.Error.WriteLine("Desktop verification failed: " + error.GetType().Name); return 1; }
+                    if (automated || updateStartup) { Console.Error.WriteLine("Desktop verification failed: " + error.GetType().Name); return 1; }
                     MessageBox.Show("Codex 续航无法启动，请确认已安装 .NET Framework 4.8，并检查应用数据目录权限。\n\n错误类型：" + error.GetType().Name, "Codex 续航", MessageBoxButton.OK, MessageBoxImage.Error);
                     return 1;
                 }
                 finally
                 {
-                    service?.Dispose();
+                    updates?.Dispose(); service?.Dispose();
                     if (temporaryDirectory != null)
                     {
                         try { if (Directory.Exists(temporaryDirectory)) Directory.Delete(temporaryDirectory, true); }
                         catch (IOException) { }
                         catch (UnauthorizedAccessException) { }
                     }
+                    instance.ReleaseMutex();
                 }
             }
         }

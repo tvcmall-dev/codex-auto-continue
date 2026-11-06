@@ -81,6 +81,9 @@ namespace CodexAutoContinue.Core
         public bool GlobalMonitoring { get; set; } = true;
         public bool StartWithWindows { get; set; }
         public bool CloseToTray { get; set; } = true;
+        public bool AutoCheckUpdates { get; set; } = true;
+        public bool AutoInstallUpdates { get; set; } = true;
+        public bool IncludePrereleaseUpdates { get; set; } = true;
         public int PollSeconds { get; set; } = 3;
         public int MaxAttempts { get; set; } = 5;
         public int NetworkDelaySeconds { get; set; } = 30;

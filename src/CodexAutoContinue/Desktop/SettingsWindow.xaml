@@ -29,6 +29,31 @@
         <Border Background="#26362F" BorderBrush="#48604D" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,24"><StackPanel><TextBlock Text="当前连接状态" FontSize="12" Margin="0,0,0,8"/><TextBlock x:Name="ConnectionDetails" Style="{StaticResource MutedText}" LineHeight="19"/><TextBlock Text="历史中的“执行中”不代表当前仍在执行。首次读取的历史记录不会用于自动续接；未确认送达时保持等待，避免重复发送。" Style="{StaticResource MutedText}" FontSize="10" LineHeight="18" Margin="0,10,0,0"/></StackPanel></Border>
         <TextBlock Text="应用行为" FontSize="17" Margin="0,0,0,17"/><CheckBox x:Name="CloseToTray" Content="关闭窗口时最小化到系统托盘" Margin="0,0,0,17"/><CheckBox x:Name="StartWithWindows" Content="登录 Windows 后自动启动" Margin="0,0,0,17"/><TextBlock x:Name="DataPath" Style="{StaticResource MutedText}" LineHeight="20" TextWrapping="Wrap"/>
       </StackPanel></ScrollViewer></TabItem>
+      <TabItem Header="应用升级"><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Margin="3,0,13,15">
+        <TextBlock Text="保持最新，继续推进" FontSize="18" Margin="0,0,0,9"/>
+        <TextBlock Text="自动下载新版本，在程序空闲时重启安装。设置与监控记录会保留；安装失败时自动回退。" Style="{StaticResource MutedText}" LineHeight="20" Margin="0,0,0,20"/>
+        <Border CornerRadius="9" Background="#26392D" BorderBrush="#4A6248" BorderThickness="1" Padding="17" Margin="0,0,0,20">
+          <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+            <StackPanel Margin="0,0,18,0"><TextBlock Text="当前版本" FontSize="11" Foreground="#A7C49B"/><TextBlock x:Name="CurrentVersion" Text="—" FontSize="20" FontFamily="Bahnschrift" Margin="0,9,0,0" TextWrapping="Wrap"/></StackPanel>
+            <StackPanel Grid.Column="1"><TextBlock Text="可用版本" FontSize="11" Foreground="#A7C49B"/><TextBlock x:Name="AvailableVersion" Text="尚未发现新版本" FontSize="16" Margin="0,9,0,0" TextWrapping="Wrap"/></StackPanel>
+          </Grid>
+        </Border>
+        <TextBlock x:Name="UpdateStatus" Text="等待检查更新" TextWrapping="Wrap" LineHeight="21" Foreground="#BDCFB7" Margin="0,0,0,12"/>
+        <ProgressBar x:Name="UpdateProgress" Minimum="0" Maximum="100" Height="6" Background="#23362D" Foreground="#A5C49B" BorderThickness="0" Visibility="Collapsed" Margin="0,0,0,17"/>
+        <WrapPanel Margin="0,0,0,12"><Button x:Name="CheckUpdateButton" Content="立即检查更新" Click="CheckUpdatesClick" Margin="0,0,10,8"/><Button x:Name="InstallUpdateButton" Content="保存设置并重启安装" Style="{StaticResource PrimaryButton}" Click="InstallUpdateClick" IsEnabled="False" Margin="0,0,0,8"/></WrapPanel>
+        <TextBlock Text="立即检查使用已保存的更新通道；修改开关后请先保存设置。" Style="{StaticResource MutedText}" FontSize="10" LineHeight="18" Margin="0,0,0,24"/>
+        <TextBlock Text="升级方式" FontSize="17" Margin="0,0,0,16"/>
+        <CheckBox x:Name="AutoCheckUpdates" Content="启动时自动检查，此后每 6 小时检查一次" Margin="0,0,0,16"/>
+        <CheckBox x:Name="AutoInstallUpdates" Content="下载完成后，在程序空闲时自动重启安装" Margin="0,0,0,16"/>
+        <CheckBox x:Name="IncludePrereleaseUpdates" Content="接收预览版更新" Margin="0,0,0,20"/>
+        <Border Background="#26332D" CornerRadius="8" Padding="14" Margin="0,0,0,21"><StackPanel>
+          <TextBlock Text="空闲时才重启" FontSize="12" Margin="0,0,0,8"/>
+          <TextBlock Text="正在续接会话、投递通知或编辑设置时会等待。重启前保存监控状态，待确认的消息不会重复发送。网络检查失败不会中断监控。" Style="{StaticResource MutedText}" LineHeight="20"/>
+        </StackPanel></Border>
+        <TextBlock Text="更新来源" FontSize="12" Margin="0,0,0,8"/>
+        <TextBlock Text="GitHub Releases · tvcmall-dev/codex-auto-continue" Foreground="#AAC6A4" FontSize="11" TextWrapping="Wrap"/>
+        <TextBlock Text="只下载本项目发布的 Windows EXE，校验通过后安装，不请求管理员权限。预览版仍保留当前 Codex 桌面恢复接口的已知限制。" Style="{StaticResource MutedText}" FontSize="10" LineHeight="18" Margin="0,9,0,0"/>
+      </StackPanel></ScrollViewer></TabItem>
     </TabControl>
     <Grid Grid.Row="2" Margin="0,18,0,0"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock x:Name="Feedback" Text="修改尚未保存。" Foreground="#AFC5A9" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,15,0"/><Button x:Name="CancelButton" Grid.Column="1" Content="取消" Click="CancelClick" Margin="0,0,10,0"/><Button x:Name="SaveButton" Grid.Column="2" Content="保存设置" Style="{StaticResource PrimaryButton}" Click="SaveClick"/></Grid>
   </Grid>

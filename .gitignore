@@ -1,0 +1,25 @@
+# Build and IDE output
+.vs/
+**/bin/
+**/obj/
+packages/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Local monitoring state and credentials
+.env
+.env.*
+!.env.example
+*.db
+*.db-shm
+*.db-wal
+*.log
+appsettings.local.json
+
+# Local preview and verification sessions
+.superpowers/
+.playwright-cli/
+output/
+node_modules/

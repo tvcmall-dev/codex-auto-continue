@@ -46,6 +46,8 @@
     dialog{background:#202b2d;border-color:#4e6760;box-shadow:0 25px 100px #00000088}dialog::backdrop{background:#060e10b0}.modal-head{border-color:#3b514b}.modal-head small{color:#9eb9aa}.modal-head h2{color:#e2edda}.modal-close{background:#34453e;color:#c2d4ba}.modal-close:hover{background:#41574b}.modal-intro{color:#b7c7b2}.log-item{border-color:#3e5549}.log-item:hover{background:#2c4035}.log-item h3{color:#dae5cd}.log-item p{color:#b9c9b0}.log-item small{color:#a1b99a}
     .policy{background:#29362f;border-color:#465b4c}.policy h3{color:#d8e4ca}.policy p{color:#b7c6ae}.policy strong{color:#dce8ce}.policy code{background:#3d5040;color:#dfeacb}.policy-safe{background:#253c30;border-color:#4a6d53}.policy-safe h3{color:#b8d8b9}.scenario-option{background:#29382f;border-color:#49614e}.scenario-option:hover{background:#3a5140;border-color:#97b386}.scenario-option strong{color:#dde7d0}.scenario-option small{color:#afc39f}.demo-disclaimer{background:#2d3f31;color:#becea9}.toast{background:#304735;border-color:#829f6c;color:#e0ecc9;box-shadow:0 8px 28px #07140a55}
     .notification-banner{background:#293d32;border-color:#4d6750;color:#dce8ca}.notification-banner small{color:#baccad}.notification-summary{background:#26332e;border-color:#42594a}.notification-summary strong{color:#e0e9cf}.notification-summary p{color:#b3c4a7}.summary-state{background:#3e523d;color:#dce6c6}.form-field label,.event-options legend{color:#d1dfc3}.form-field input,.form-field select{background:#182424;border-color:#4c6557;color:#e0e8ce}.form-field input::placeholder{color:#9bb18d}.form-field input[aria-invalid="true"]{background:#3a2c26;border-color:#c88c68}.field-hint{color:#acbe9c}.field-error{color:#e6b28b}.setting-enabled{border-color:#41584b}.setting-enabled strong{color:#e0e8ce}.setting-enabled small{color:#afc2a2}.setting-switch{background:#52664d}.setting-switch:before{background:#e9efdb}.setting-switch[aria-checked="true"]{background:#8caf7e}.event-checks label{color:#ccdbb8}.event-checks input{accent-color:#a7c78b}.secondary-action{background:#344b35;border-color:#617c52;color:#d8e6bd}.secondary-action:hover{background:#415c3f}.notification-feedback{color:#cfddbb}.notification-feedback.error{color:#e6b28b}
+    .reply-settings{margin-top:22px;padding-top:22px;border-top:1px solid var(--line)}.reply-settings h3{font-size:15px;font-weight:500;margin:0 0 9px;color:#e1e9e4}.reply-settings>p{font-size:11px;line-height:1.8;color:#acbcb4;margin:0 0 16px}.reply-mode-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.reply-mode-option{display:flex;align-items:flex-start;gap:8px;padding:12px 10px;border:1px solid #46594e;border-radius:9px;background:#26322e;cursor:pointer}.reply-mode-option:has(input:checked){border-color:#85b39a;background:#30473a}.reply-mode-option input{margin:2px 0 0;accent-color:#96c5ad;width:13px;height:13px;flex-shrink:0}.reply-mode-option strong{font-weight:500;font-size:12px;color:#dce7df}.reply-mode-option small{display:block;font-size:10px;color:#a9bfb0;margin-top:6px}.reply-summary-message{white-space:pre-wrap;overflow-wrap:anywhere;font-family:var(--font);color:#e0e9d7}.reply-summary{margin-top:17px}.reply-settings .notification-feedback{color:#bccfc2}.timeline p{overflow-wrap:anywhere}
+    @media(max-width:520px){.reply-mode-options{grid-template-columns:1fr}.reply-mode-option{padding:11px 12px}.reply-mode-option small{display:inline-block;margin:0 0 0 10px}}
     @media(max-width:800px){.titlebar{background:#1c2527f5}.inspector{border-top-color:#3b514b}.timeline li:before{border-color:#1b2728}}
     @media(max-width:520px){#demo-clock{display:none}}
     @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
@@ -140,6 +142,9 @@
     let notificationLastEvent = null;
     let notificationTestVersion = 0;
     let currentModalType = '';
+    const replyModes = {zh:{label:'中文',message:'继续'},en:{label:'英文',message:'continue'},custom:{label:'自定义',message:''}};
+    let replySettings = {mode:'zh',custom:''};
+    const continuationMessage = () => replySettings.mode === 'custom' ? replySettings.custom : replyModes[replySettings.mode].message;
     const sessions = [
       {id:'s1', name:'整理读书笔记目录', project:'个人知识库', step:'校验目录与链接', state:'running', monitor:true, retries:0, remaining:0, events:[['35:56','收到新的执行事件'],['35:42','开始检查目录结构'],['34:12','任务开始执行']]},
       {id:'s2', name:'制作天气卡片组件', project:'示例组件', step:'重新调用构建工具', state:'retry', monitor:true, retries:1, remaining:0, events:[['35:51','进入工具内部重试'],['35:49','工具调用暂时失败'],['34:31','开始构建卡片组件']]},
@@ -234,6 +239,44 @@
       toastTimer = setTimeout(() => $('#toast').classList.remove('visible'),3500);
     }
     function addEvent(session, message) { session.events.unshift([currentTime().slice(3),message]); session.events = session.events.slice(0,10); }
+
+    function replySettingsMarkup() {
+      return `<section class="reply-settings" aria-labelledby="reply-settings-title"><h3 id="reply-settings-title">续接消息</h3><p>选择模拟发给 Codex 的消息语言与内容。此设置控制续接消息，界面语言保持中文。</p><form class="notification-form" id="reply-form" novalidate autocomplete="off"><fieldset class="event-options"><legend>消息语言</legend><div class="reply-mode-options">${Object.entries(replyModes).map(([key,mode]) => `<label class="reply-mode-option"><input id="reply-mode-${key}" type="radio" name="reply-mode" value="${key}"><span><strong>${mode.label}</strong><small>${mode.message || '使用输入内容'}</small></span></label>`).join('')}</div></fieldset><div class="form-field hidden" id="reply-custom-group"><label for="reply-custom">自定义续接消息</label><input id="reply-custom" type="text" maxlength="1000" placeholder="请输入发给 Codex 的续接消息" aria-invalid="false" aria-describedby="reply-custom-hint reply-error"><small class="field-hint" id="reply-custom-hint">最多 1000 个字符；保存时移除首尾空白，内容不能为空。</small><span class="field-error" id="reply-error" role="alert"></span></div><p class="notification-feedback" id="reply-feedback" role="status" aria-live="polite">保存后用于人工与自动续接；修改未保存时，继续使用已生效消息。</p><div class="notification-actions"><button class="primary-action" type="submit">${icon('check',15)}保存续接消息</button></div></form><div class="notification-summary reply-summary" aria-label="已生效的续接消息"><div><strong id="reply-summary-mode">当前生效：中文</strong><p>最终消息：<span class="reply-summary-message" id="reply-summary-message">继续</span></p></div><span class="summary-state">仅本页内存</span></div><small class="field-hint">界面预览：消息只写入本地模拟事件，不发送到真实 Codex。刷新页面即清除设置，恢复默认中文“继续”。</small></section>`;
+    }
+    function readReplyMode() {
+      return Object.keys(replyModes).find(mode => $(`#reply-mode-${mode}`).checked) || 'zh';
+    }
+    function updateReplySummary() {
+      $('#reply-summary-mode').textContent = `当前生效：${replyModes[replySettings.mode].label}`;
+      $('#reply-summary-message').textContent = continuationMessage();
+    }
+    function loadReplyForm() {
+      Object.keys(replyModes).forEach(mode => { $(`#reply-mode-${mode}`).checked = mode === replySettings.mode; });
+      $('#reply-custom').value = replySettings.custom;
+      $('#reply-custom-group').classList.toggle('hidden',replySettings.mode !== 'custom');
+      updateReplySummary();
+      $('#reply-form').addEventListener('submit',saveReplySettings);
+    }
+    function replyFormChanged(event) {
+      if (currentModalType !== 'policy' || !event.target.closest('#reply-form')) return;
+      $('#reply-custom-group').classList.toggle('hidden',readReplyMode() !== 'custom');
+      $('#reply-custom').setAttribute('aria-invalid','false');
+      $('#reply-error').textContent = '';
+      $('#reply-feedback').textContent = '更改尚未保存；人工与自动续接仍使用当前生效消息。';
+    }
+    function saveReplySettings(event) {
+      event.preventDefault();
+      const mode = readReplyMode();
+      const custom = $('#reply-custom').value.trim();
+      const error = mode === 'custom' ? (!custom ? '请输入自定义续接消息，不能只包含空白。' : custom.length > 1000 ? '自定义续接消息不能超过 1000 个字符。' : '') : '';
+      $('#reply-error').textContent = error;
+      $('#reply-custom').setAttribute('aria-invalid',String(Boolean(error)));
+      if (error) { $('#reply-custom').focus(); return; }
+      replySettings = {mode,custom};
+      $('#reply-custom').value = custom;
+      updateReplySummary();
+      $('#reply-feedback').textContent = '续接消息已生效，保存在当前页面内存。刷新即清除；不会发送真实请求。';
+    }
 
     // Notification configuration and test results live only in this page's memory.
     function notificationMarkup() {
@@ -339,7 +382,7 @@
       session.step = '已发送，等待恢复确认';
       const generation = (session.generation || 0) + 1;
       session.generation = generation;
-      addEvent(session,`${automatic ? '自动' : '人工'}发送模拟续接，等待恢复确认`);
+      addEvent(session,`${automatic ? '自动' : '人工'}发送模拟续接，消息：「${continuationMessage()}」；等待恢复确认`);
       renderAll();
       notify(`${session.name}：已发送，等待恢复确认（模拟）`);
       setTimeout(() => {
@@ -369,9 +412,11 @@
       if (type === 'about') content = '<p class="modal-intro">这是为 Windows 桌面程序设计的可点击视觉原型。目标技术为 <strong>.NET Framework 4.8 + WPF</strong>，当前文件使用 HTML 演示布局与交互。</p><div class="policy-grid"><section class="policy"><h3>'+icon('grid',17)+'先看清楚，再做决定</h3><p>可测试会话筛选、搜索、监控开关、异常情景、人工续接和恢复确认。左侧异常记录与重试策略也可打开查看。</p></section><section class="policy"><h3>'+icon('flow',17)+'观察恢复，而非假定恢复</h3><p>点击“立即继续”后，界面先显示“已发送，等待恢复确认”，约 2.4 秒后模拟产生新的执行事件，才将状态切换为“执行中”。</p></section></div><div class="demo-disclaimer">界面预览 · 模拟数据<br>所有会话名称、事件、倒计时和状态均为虚构。此文件无外部网络依赖，未读取本机 Codex、文件、凭据或真实会话。它用于确认界面设计，不代表已经实现 WPF 程序或真实监控能力。</div>';
       if (type === 'scenario') content = `<p class="modal-intro">将“${escapeHtml(selected().name)}”切换为以下模拟情景。不会影响任何真实会话。</p><div class="scenario-grid">${['running','retry','network','quota','approval','complete','stopped'].map(state => `<button class="scenario-option" data-scenario="${state}" style="${stateStyle(state)}"><span class="mini-art">${illustration(state,true)}</span><span><strong>${states[state].label}</strong><small>${states[state].note}</small></span></button>`).join('')}</div><div class="demo-disclaimer">网络失败默认 30 秒后自动模拟续接；额度等待默认 5 分钟。可先暂停全局监控，再体验人工“立即继续”。</div>`;
       if (type === 'notifications') content = notificationMarkup();
+      if (type === 'policy') content += replySettingsMarkup();
       $('#modal-body').innerHTML = content;
       $('#modal-close').innerHTML = icon('close',17);
       $('#modal').showModal();
+      if (type === 'policy') loadReplyForm();
       if (type === 'notifications') {
         loadNotificationForm();
         $('#notification-form').addEventListener('submit',saveNotification);
@@ -410,6 +455,8 @@
     $('#modal').addEventListener('close',() => { notificationTestVersion += 1; currentModalType = ''; });
     $('#modal-body').addEventListener('input',notificationFormChanged);
     $('#modal-body').addEventListener('change',notificationFormChanged);
+    $('#modal-body').addEventListener('input',replyFormChanged);
+    $('#modal-body').addEventListener('change',replyFormChanged);
     $('#modal').addEventListener('click',event => { if (event.target === $('#modal')) { const bounds = $('#modal').getBoundingClientRect(); if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) $('#modal').close(); } });
     $('#modal-body').addEventListener('click',event => {
       if (event.target.closest('#notification-enabled')) {

@@ -151,8 +151,29 @@ notification, or an accepted request by itself is not recovery evidence.
 - If the monitor restarts, reconcile persisted incidents against the connected
   backend before re-enabling their scheduled actions.
 
-The default continuation text is the Chinese word for "continue" (`\u7ee7\u7eed`).
-It can be configured without changing the conversation's model or permissions.
+### Continuation Message Selection
+
+Settings offer three mutually exclusive message modes:
+
+| Mode | Message sent to Codex |
+| --- | --- |
+| Chinese (default) | The Chinese word for "continue" (`\u7ee7\u7eed`) |
+| English | `continue` |
+| Custom | The user's saved non-empty input |
+
+This setting controls the message sent to Codex, not the interface language.
+Both manual continuation and automatically scheduled continuation use the same
+saved message. Preserve custom text as plain text and trim outer whitespace;
+reject empty/whitespace-only input and text longer than 1,000 characters.
+Show the effective message before saving. Unsaved edits do not change active
+behavior. Do not change the conversation's model or permissions.
+
+Persist the selected mode and custom text with other production settings, and
+recheck the effective saved message immediately before dispatch. Pending actions
+use the current saved setting; edits do not alter messages already queued.
+The prototype offers this configuration in the retry-policy panel and stores it
+in page memory only. Its simulated timeline records the actual selected message
+as escaped plain text.
 
 ## Panel Design
 
@@ -169,6 +190,7 @@ administration template.
 - The inspector shows the selected session's larger state illustration,
   current error, retry count, next action, and event timeline.
 - A global monitoring control and connection indicator remain visible.
+- Retry settings offer Chinese, English, and custom continuation messages.
 - Notification settings include the destination platform, webhook address,
   optional signing secret, event subscriptions, and an explicit test action.
 - A manual continuation action explains pending confirmation. It is unavailable
@@ -252,6 +274,9 @@ the queued/confirmation/recovered visual sequence, keyboard access, and usable
 layout at both wide and narrow viewport sizes. Also verify dark-theme readability,
 provider selection, hidden credential inputs, empty/invalid webhook validation,
 event choices, settings summaries, and the clearly simulated test result.
+Verify the default Chinese continuation, English selection, custom input,
+empty-custom rejection, unsaved-edit isolation, and that both manual and
+scheduled continuation use the saved message.
 
 For production notifications, verify platform payloads and signatures, platform
 failure responses inside HTTP 200, finite retries, incident/event deduplication,
@@ -273,6 +298,12 @@ of external webhook requests. The 1440-pixel desktop layout and 430-pixel narrow
 layout were inspected; neither the page nor the settings dialog overflowed
 horizontally. The final page reported no browser console errors. These checks
 validate the prototype only, not the WPF application or live integrations.
+
+The continuation-message update also passed browser checks for the Chinese
+default, English selection, unsaved-edit isolation, blank custom rejection,
+preservation after a failed save, trimmed custom text, and input length limits.
+Manual English continuation and scheduled custom-message continuation were
+verified through the simulated timeline and recovery confirmation.
 
 ## Official References
 

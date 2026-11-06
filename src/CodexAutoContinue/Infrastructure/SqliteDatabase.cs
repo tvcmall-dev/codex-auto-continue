@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -16,7 +17,10 @@ namespace CodexAutoContinue.Infrastructure
         }
         public List<Dictionary<string, object>> Query(string sql, params object[] parameters)
         {
-            var rows = new List<Dictionary<string, object>>();
+            return QueryRows(sql, parameters).ToList();
+        }
+        public IEnumerable<Dictionary<string, object>> QueryRows(string sql, params object[] parameters)
+        {
             using (var statement = Prepare(sql, parameters))
             {
                 int result;
@@ -29,11 +33,10 @@ namespace CodexAutoContinue.Infrastructure
                         var type = Native.sqlite3_column_type(statement.Handle, i);
                         row[name] = type == 5 ? null : type == 1 ? (object)Native.sqlite3_column_int64(statement.Handle, i) : type == 2 ? (object)Native.sqlite3_column_double(statement.Handle, i) : Text(Native.sqlite3_column_text(statement.Handle, i));
                     }
-                    rows.Add(row);
+                    yield return row;
                 }
                 if (result != 101) throw new InvalidOperationException("SQLite 查询失败（错误码 " + result + "）。");
             }
-            return rows;
         }
         public int Execute(string sql, params object[] parameters)
         {

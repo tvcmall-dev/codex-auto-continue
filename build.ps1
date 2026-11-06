@@ -1,4 +1,4 @@
-param([string]$Version = '0.2.0-preview')
+param([string]$Version = '0.2.1-preview')
 $ErrorActionPreference = 'Stop'
 if ($Version -notmatch '^[0-9]+\.[0-9]+\.[0-9]+(?:-[a-zA-Z0-9.-]+)?$') { throw 'Invalid package version.' }
 Push-Location $PSScriptRoot

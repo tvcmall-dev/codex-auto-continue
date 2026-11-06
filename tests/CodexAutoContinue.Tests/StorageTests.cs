@@ -37,6 +37,13 @@ namespace CodexAutoContinue.Tests
                     db.Execute("CREATE TABLE sample(value TEXT)");
                     db.Execute("INSERT INTO sample(value) VALUES(?)", "测试 ' 引号; DROP TABLE sample;");
                     Check((string)db.Query("SELECT value FROM sample")[0]["value"] == "测试 ' 引号; DROP TABLE sample;", "SQLite binding and UTF-8");
+                    const string laterFailure = "SELECT 1 AS value UNION ALL SELECT abs(-9223372036854775808)";
+                    Check(Convert.ToInt64(db.QueryRows(laterFailure).First()["value"]) == 1, "SQLite row enumeration must stop before evaluating unread rows");
+                    try { db.Query(laterFailure); throw new Exception("Materialized queries must still evaluate all rows"); }
+                    catch (InvalidOperationException) { }
+                    db.QueryRows("SELECT value FROM sample UNION ALL SELECT value FROM sample").First();
+                    db.Execute("DROP TABLE sample");
+                    Check(db.Query("SELECT name FROM sqlite_master WHERE name='sample'").Count == 0, "Stopping row enumeration must finalize its statement and release table locks");
                 }
                 File.WriteAllText(Path.Combine(folder, "settings.json"), "invalid-json");
                 loaded = config.Load(out warning);

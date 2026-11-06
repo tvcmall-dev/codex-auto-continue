@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -26,9 +27,11 @@ namespace CodexAutoContinue.Desktop
         private readonly DispatcherTimer clock = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         private readonly Forms.NotifyIcon tray;
         private readonly System.Drawing.Icon trayIcon;
+        private Dictionary<string, SessionRecord> sessionSnapshot = new Dictionary<string, SessionRecord>();
         private bool refreshing, exiting, continuing, updateTickRunning;
-        private int tick, updateTick;
-        private string filter = "all";
+        private volatile bool closed;
+        private int tick, updateTick, viewUpdateQueued;
+        private string filter = "active";
         public MainWindow(IApplicationService service, IUpdateService updates = null)
         {
             this.service = service;
@@ -63,6 +66,7 @@ namespace CodexAutoContinue.Desktop
             Closing += OnClosing;
             Closed += (s, e) =>
             {
+                closed = true;
                 clock.Stop(); service.Changed -= OnServiceChanged;
                 if (updates != null) { updates.Changed -= OnUpdateChanged; updates.IsUiIdle = null; updates.IsWindowVisible = null; updates.RestartRequested = null; }
                 tray.Visible = false; tray.Dispose(); trayIcon.Dispose();
@@ -101,13 +105,27 @@ namespace CodexAutoContinue.Desktop
         }
         public async Task RefreshNowAsync()
         {
-            if (refreshing) return;
+            if (refreshing || closed) return;
             refreshing = true;
-            try { await service.RefreshAsync(); UpdateView(); }
-            catch { FooterStatus.Text = "读取失败，请检查连接与应用设置。"; }
+            try { await service.RefreshAsync(); QueueViewUpdate(); }
+            catch { if (!closed) FooterStatus.Text = "读取失败，请检查连接与应用设置。"; }
             finally { refreshing = false; }
         }
-        private void OnServiceChanged() { if (!Dispatcher.HasShutdownStarted) Dispatcher.BeginInvoke(new Action(UpdateView)); }
+        private void OnServiceChanged() { QueueViewUpdate(); }
+        private void QueueViewUpdate()
+        {
+            if (closed || Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished || Interlocked.Exchange(ref viewUpdateQueued, 1) != 0) return;
+            try
+            {
+                // Let refresh completion and its Changed event share one rendering pass.
+                Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+                {
+                    Interlocked.Exchange(ref viewUpdateQueued, 0);
+                    if (!closed && !Dispatcher.HasShutdownStarted) UpdateView();
+                }));
+            }
+            catch (InvalidOperationException) { Interlocked.Exchange(ref viewUpdateQueued, 0); }
+        }
         private bool FilterItem(object value)
         {
             var item = (SessionItem)value;
@@ -120,6 +138,7 @@ namespace CodexAutoContinue.Desktop
         {
             string selected = (SessionList.SelectedItem as SessionItem)?.ThreadId;
             var records = service.Sessions.ToArray();
+            sessionSnapshot = records.ToDictionary(record => record.ThreadId);
             var ids = new HashSet<string>(records.Select(r => r.ThreadId));
             for (int i = items.Count - 1; i >= 0; i--) if (!ids.Contains(items[i].ThreadId)) items.RemoveAt(i);
             foreach (var record in records.OrderByDescending(r => r.LastActivityUtc))
@@ -144,7 +163,8 @@ namespace CodexAutoContinue.Desktop
         private void UpdateDetails()
         {
             var item = SessionList.SelectedItem as SessionItem;
-            var record = item == null ? null : service.Sessions.FirstOrDefault(s => s.ThreadId == item.ThreadId);
+            SessionRecord record;
+            if (item == null || !sessionSnapshot.TryGetValue(item.ThreadId, out record)) record = null;
             if (record == null)
             {
                 DetailGlyph.State = SessionState.Unknown;
@@ -181,8 +201,12 @@ namespace CodexAutoContinue.Desktop
         private void RefreshFilter()
         {
             view.Refresh();
+            PageTitle.Text = filter == "active" ? "执行中" : filter == "attention" ? "需关注" : "会话总览";
             EmptyState.Visibility = view.IsEmpty ? Visibility.Visible : Visibility.Collapsed;
-            EmptyText.Text = items.Count == 0 ? "尚未发现本地桌面会话" : "没有符合条件的会话";
+            EmptyText.Text = !string.IsNullOrWhiteSpace(SearchBox.Text) ? "没有符合条件的会话"
+                : filter == "active" ? "当前没有执行中的会话"
+                : filter == "attention" ? "当前没有需要关注的会话"
+                : items.Count == 0 ? "尚未发现本地桌面会话" : "没有符合条件的会话";
             AllFilter.Background = new SolidColorBrush(ColorsEx.Parse(filter == "all" ? "#466249" : "#25382E"));
             ActiveFilter.Background = new SolidColorBrush(ColorsEx.Parse(filter == "active" ? "#466249" : "#25382E"));
             AttentionFilter.Background = new SolidColorBrush(ColorsEx.Parse(filter == "attention" ? "#466249" : "#25382E"));
@@ -203,13 +227,13 @@ namespace CodexAutoContinue.Desktop
         private void NotificationsClick(object sender, RoutedEventArgs e) { OpenSettings(1); }
         private void ConnectionClick(object sender, RoutedEventArgs e) { OpenSettings(2); }
         private void UpdateClick(object sender, RoutedEventArgs e) { OpenSettings(3); }
-        private void OpenSettings(int tab) { var window = new SettingsWindow(service, tab, updates) { Owner = this }; window.ShowDialog(); UpdateView(); UpdateUpdateStatus(); }
-        private void GlobalClick(object sender, RoutedEventArgs e) { service.SetGlobalMonitoring(!service.Settings.GlobalMonitoring); UpdateView(); }
+        private void OpenSettings(int tab) { var window = new SettingsWindow(service, tab, updates) { Owner = this }; window.ShowDialog(); QueueViewUpdate(); UpdateUpdateStatus(); }
+        private void GlobalClick(object sender, RoutedEventArgs e) { service.SetGlobalMonitoring(!service.Settings.GlobalMonitoring); QueueViewUpdate(); }
         private void SessionMonitoringClick(object sender, RoutedEventArgs e)
         {
             var box = (CheckBox)sender;
             var item = box.DataContext as SessionItem;
-            if (item != null) { service.SetSessionMonitoring(item.ThreadId, box.IsChecked == true); UpdateView(); }
+            if (item != null) { service.SetSessionMonitoring(item.ThreadId, box.IsChecked == true); QueueViewUpdate(); }
         }
         private async void ContinueClick(object sender, RoutedEventArgs e)
         {
@@ -220,7 +244,7 @@ namespace CodexAutoContinue.Desktop
             try { await service.ContinueAsync(item.ThreadId); }
             catch (Exception error) { MessageBox.Show(this, error.Message, "无法续接", MessageBoxButton.OK, MessageBoxImage.Information); }
             finally { continuing = false; }
-            UpdateView();
+            QueueViewUpdate();
         }
         private void DataFolderClick(object sender, RoutedEventArgs e)
         {

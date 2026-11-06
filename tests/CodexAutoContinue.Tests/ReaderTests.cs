@@ -47,7 +47,7 @@ namespace CodexAutoContinue.Tests
                     Require(!failure.Reason.Contains("secret") && !failure.Reason.Contains("example.invalid"), "Failure reasons must not disclose raw error text or tokens.");
                     Require(!reader.ReadAsync(settings).GetAwaiter().GetResult().Observations.Any(o => o.Kind == EvidenceKind.TerminalFailure), "A final failure must not be replayed each poll.");
 
-                    now = now.AddSeconds(3);
+                    now = now.AddSeconds(3).AddMilliseconds(600);
                     history.Execute("INSERT INTO thread_turns VALUES(?,?,?,?,?,?,?)", "desktop", "turn2", 5, "inProgress", null, Seconds(now), null);
                     AddItem(history, "turn2", "user1", "userMessage", "{\"type\":\"userMessage\",\"content\":[{\"type\":\"text\",\"text\":\"continue\"}]}", now, 6, null);
                     var started = reader.ReadAsync(settings).GetAwaiter().GetResult();
@@ -55,6 +55,20 @@ namespace CodexAutoContinue.Tests
                     Require(!started.Observations.Any(o => o.Kind == EvidenceKind.Progress), "A turn start or user message is not recovery evidence.");
                     Require(started.Observations.Single(o => o.Kind == EvidenceKind.UserMessage).IsContinuationMessage, "An echoed continuation must preserve its incident budget.");
                     Require(started.Observations.Single(o => o.Kind == EvidenceKind.UserMessage).UserMessageFingerprint == MessageIdentity.Fingerprint("continue"), "User content is represented by its fingerprint without exposing transcript text.");
+                    var withoutOutput = new SessionRecord { ThreadId = "desktop" };
+                    var waiting = new SessionRecord
+                    {
+                        ThreadId = "desktop", TurnId = "turn1", FailedTurnId = "turn1", IncidentId = "waiting",
+                        AwaitingConfirmation = true, DispatchUtc = now.AddSeconds(-1), State = SessionState.Pending, Attempts = 1
+                    };
+                    foreach (var observation in started.Observations)
+                    {
+                        new RecoveryEngine().Apply(withoutOutput, observation, settings, now);
+                        new RecoveryEngine().Apply(waiting, observation, settings, now);
+                    }
+                    Require(withoutOutput.State == SessionState.Running, "A new turn with a millisecond user message must appear running before its first output.");
+                    Require(waiting.State == SessionState.Pending && waiting.AwaitingConfirmation && waiting.Attempts == 1 && !waiting.Events.Any(e => e.Kind == "recovery"),
+                        "Turn start alone must preserve pending recovery confirmation and its attempt budget.");
 
                     now = now.AddSeconds(3);
                     AddItem(history, "turn2", "emptyOutput", "agentMessage", "{\"type\":\"agentMessage\",\"text\":\"\"}", now, 7, null);
@@ -118,9 +132,91 @@ namespace CodexAutoContinue.Tests
                     foreach (var observation in coalesced.Observations) engine.Apply(pending, observation, settings, now);
                     Require(!pending.AwaitingConfirmation && pending.State == SessionState.Running,
                         "Turn start detection must not suppress real output coalesced into the same reader poll.");
+                    RecentProgressSnapshots(history, settings, now);
+                    MaskedRecentProgressSnapshots(history, settings, now);
                 }
             }
             finally { Directory.Delete(directory, true); }
+        }
+
+        private static void RecentProgressSnapshots(SqliteDatabase history, AppSettings settings, DateTime now)
+        {
+            var cases = new[]
+            {
+                new { Name = "recent-output", Type = "agentMessage", Text = "visible output", Created = now.AddSeconds(-30), Completed = (DateTime?)null, Status = "inProgress", Expected = SessionState.Running },
+                new { Name = "recent-tool", Type = "commandExecution", Text = "", Created = now.AddMinutes(-5), Completed = (DateTime?)now.AddSeconds(-20), Status = "inProgress", Expected = SessionState.Running },
+                new { Name = "stale-output", Type = "agentMessage", Text = "old output", Created = now.AddSeconds(-121), Completed = (DateTime?)null, Status = "inProgress", Expected = SessionState.Unknown },
+                new { Name = "near-future-output", Type = "agentMessage", Text = "future output", Created = now.AddSeconds(20), Completed = (DateTime?)null, Status = "inProgress", Expected = SessionState.Unknown },
+                new { Name = "future-output", Type = "agentMessage", Text = "future output", Created = now.AddSeconds(61), Completed = (DateTime?)null, Status = "inProgress", Expected = SessionState.Unknown },
+                new { Name = "empty-output", Type = "agentMessage", Text = "", Created = now.AddSeconds(-20), Completed = (DateTime?)null, Status = "inProgress", Expected = SessionState.Unknown },
+                new { Name = "unfinished-tool", Type = "commandExecution", Text = "", Created = now.AddSeconds(-20), Completed = (DateTime?)null, Status = "inProgress", Expected = SessionState.Unknown },
+                new { Name = "finished-turn", Type = "agentMessage", Text = "final output", Created = now.AddSeconds(-20), Completed = (DateTime?)null, Status = "completed", Expected = SessionState.Completed },
+                new { Name = "stopped-turn", Type = "agentMessage", Text = "prior output", Created = now.AddSeconds(-20), Completed = (DateTime?)null, Status = "interrupted", Expected = SessionState.Stopped }
+            };
+            var ordinal = 100L;
+            foreach (var item in cases)
+            {
+                history.Execute("INSERT INTO thread_turns VALUES(?,?,?,?,?,?,?)", "desktop", item.Name, ordinal++, item.Status, null, Seconds(now.AddMinutes(-10)), item.Status == "inProgress" ? (object)null : Seconds(now));
+                AddItem(history, item.Name, item.Name + "-item", item.Type, Json.Serialize(new { type = item.Type, text = item.Text }), item.Created, ordinal++, item.Completed.HasValue ? (long?)Milliseconds(item.Completed.Value) : null);
+                var reader = new LocalCodexReader(() => now);
+                var baseline = reader.ReadAsync(settings).GetAwaiter().GetResult();
+                var snapshot = baseline.Observations.Single(o => o.Kind == EvidenceKind.Snapshot);
+                Require(snapshot.State == item.Expected, item.Name + " baseline must display " + item.Expected + " based on recent actual activity.");
+                Require(baseline.Observations.All(o => !o.IsFresh), item.Name + " baseline must never emit automatic recovery or failure evidence.");
+                if (item.Expected != SessionState.Running) continue;
+                var active = new SessionRecord { ThreadId = "desktop" };
+                var pending = new SessionRecord { ThreadId = "desktop", State = SessionState.Pending, AwaitingConfirmation = true, Attempts = 2, FailedTurnId = "previous-failed", IncidentId = "pending", DispatchUtc = now.AddMinutes(-1) };
+                var engine = new RecoveryEngine();
+                engine.Apply(active, snapshot, settings, now);
+                engine.Apply(pending, snapshot, settings, now);
+                Require(active.State == SessionState.Running && active.LastEvidenceUtc == default(DateTime) && !active.FreshFailure && !active.NextRetryUtc.HasValue,
+                    "A recent baseline may display running without enabling automatic continuation.");
+                Require(pending.State == SessionState.Pending && pending.AwaitingConfirmation && pending.Attempts == 2 && !pending.Events.Any(e => e.Kind == "recovery"),
+                    "A recent running snapshot cannot confirm an uncertain delivery.");
+                now = now.AddMinutes(3);
+                var expired = reader.ReadAsync(settings).GetAwaiter().GetResult().Observations.Single(o => o.Kind == EvidenceKind.Snapshot);
+                Require(expired.State == SessionState.Unknown && expired.Id != snapshot.Id, "Activity expiration must change the snapshot identity even when thread metadata is unchanged.");
+                engine.Apply(active, expired, settings, now);
+                Require(active.State == SessionState.Unknown, "A baseline running display must expire without requiring new metadata or authoritative evidence.");
+                now = now.AddMinutes(-3);
+            }
+        }
+
+        private static void MaskedRecentProgressSnapshots(SqliteDatabase history, AppSettings settings, DateTime now)
+        {
+            var ordinal = 1000L;
+            foreach (var type in new[] { "agentMessage", "commandExecution" })
+            foreach (var maskCount in new[] { 1, 128 })
+            {
+                var turn = "masked-" + type + "-" + maskCount;
+                history.Execute("BEGIN");
+                history.Execute("INSERT INTO thread_turns VALUES(?,?,?,?,?,?,?)", "desktop", turn, ordinal++, "inProgress", null, Seconds(now.AddMinutes(-10)), null);
+                AddItem(history, turn, turn + "-actual", type, Json.Serialize(new { type, text = "actual execution" }),
+                    type == "agentMessage" ? now.AddSeconds(-30) : now.AddMinutes(-5), ordinal++, type == "agentMessage" ? (long?)null : Milliseconds(now.AddSeconds(-20)));
+                for (var index = 0; index < maskCount; index++)
+                    AddItem(history, turn, turn + "-empty-" + index, "agentMessage", "{\"text\":\"\"}", now.AddSeconds(-1), ordinal++, null);
+                history.Execute("COMMIT");
+                var reader = new LocalCodexReader(() => now);
+                var baseline = reader.ReadAsync(settings).GetAwaiter().GetResult();
+                Require(baseline.Observations.Single(o => o.Kind == EvidenceKind.Snapshot).State == SessionState.Running,
+                    "Recent " + type + " must remain visible behind " + maskCount + " empty assistant placeholders.");
+                Require(baseline.Observations.All(o => !o.IsFresh), "Looking behind placeholders must not turn baseline activity into new recovery evidence.");
+                var pending = new SessionRecord { ThreadId = "desktop", State = SessionState.Pending, AwaitingConfirmation = true, Attempts = 2, FailedTurnId = "previous-failed", IncidentId = "pending", DispatchUtc = now.AddMinutes(-1) };
+                var engine = new RecoveryEngine();
+                foreach (var observation in baseline.Observations) engine.Apply(pending, observation, settings, now);
+                Require(pending.State == SessionState.Pending && pending.AwaitingConfirmation && !pending.Events.Any(e => e.Kind == "recovery"),
+                    "A running snapshot found behind placeholders must not confirm an uncertain delivery.");
+                now = now.AddSeconds(1);
+                AddItem(history, turn, turn + "-new-actual", "agentMessage", "{\"text\":\"new output\"}", now, ordinal++, null);
+                AddItem(history, turn, turn + "-new-empty", "agentMessage", "{\"text\":\"\"}", now, ordinal++, null);
+                var following = reader.ReadAsync(settings).GetAwaiter().GetResult();
+                Require(following.Observations.Single(o => o.Kind == EvidenceKind.Snapshot).State == SessionState.Running &&
+                    !following.Observations.Any(o => o.Kind == EvidenceKind.Progress),
+                    "Snapshot fallback must preserve the existing latest-candidate-only fresh progress policy.");
+                foreach (var observation in following.Observations) engine.Apply(pending, observation, settings, now);
+                Require(pending.AwaitingConfirmation && pending.Attempts == 2, "Display fallback must preserve pending recovery and its budget on later polls.");
+                now = now.AddSeconds(-1);
+            }
         }
 
         private static void AddThread(SqliteDatabase state, string id, string originator, string source, DateTime time)

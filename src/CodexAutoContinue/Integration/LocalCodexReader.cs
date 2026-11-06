@@ -80,15 +80,20 @@ FROM thread_turns WHERE thread_id=? ORDER BY rollout_ordinal DESC LIMIT 1", thre
             var turn = rows.FirstOrDefault();
             var turnId = turn == null ? "" : Text(turn, "turn_id");
             var status = turn == null ? "" : Text(turn, "status");
+            var observationTime = utcNow();
+            var recentExecution = false;
+            var progress = turn == null ? null : ReadProgressItem(history, threadId, turnId, observationTime, status == "inProgress", out recentExecution);
             var activity = FromMilliseconds(Number(thread, "updated_ms"));
             var snapshotState = status == "completed" ? SessionState.Completed : status == "interrupted" ? SessionState.Stopped : SessionState.Unknown;
+            if (status == "inProgress" && recentExecution) snapshotState = SessionState.Running;
             var snapshot = Observation(thread, turnId, EvidenceKind.Snapshot, snapshotState, activity,
-                "snapshot:" + threadId + ":" + turnId + ":" + status + ":" + Number(thread, "updated_ms"));
+                "snapshot:" + threadId + ":" + turnId + ":" + status + ":" + Number(thread, "updated_ms") + ":" + snapshotState);
             snapshot.IsTerminalFailure = status == "failed";
             if (turn != null && Number(turn, "completed_at") > 0 && (status == "failed" || status == "completed" || status == "interrupted"))
                 snapshot.CompletedAtUtc = FromSeconds(Number(turn, "completed_at"));
             snapshot.Reason = status == "failed" ? "历史记录包含失败；仅对本次监测后新确认的异常安排续接。"
-                : status == "inProgress" ? "数据库记录为进行中；尚无本次监测后的执行证据，可能正在等待或已离线。"
+                : snapshotState == SessionState.Running ? "最近 2 分钟内有模型输出或工具完成，当前轮次仍在进行中。"
+                : status == "inProgress" ? "数据库记录为进行中；最近尚无实际输出或工具完成，可能正在等待或已离线。"
                 : status == "completed" ? "最近记录的执行轮次已完成。"
                 : status == "interrupted" ? "最近执行轮次已被用户停止。" : "等待新的桌面会话事件。";
             result.Observations.Add(snapshot);
@@ -98,9 +103,8 @@ FROM thread_turns WHERE thread_id=? ORDER BY rollout_ordinal DESC LIMIT 1", thre
             string previousTurn;
             var turnChanged = !turnVersions.TryGetValue(threadId, out previousTurn) || previousTurn != version;
             turnVersions[threadId] = version;
-            ReadUserMessage(history, settings, thread, turnId, result);
+            var userTime = ReadUserMessage(history, settings, thread, turnId, result);
             var turnTime = FromSeconds(Number(turn, status == "inProgress" ? "started_at" : "completed_at"));
-            var observationTime = utcNow();
             var startupSecond = new DateTime(startedUtc.Ticks - startedUtc.Ticks % TimeSpan.TicksPerSecond, DateTimeKind.Utc);
             var freshTurn = baselined && turnChanged && turnTime >= startupSecond && turnTime <= observationTime.AddMinutes(1);
             if (freshTurn)
@@ -117,27 +121,30 @@ FROM thread_turns WHERE thread_id=? ORDER BY rollout_ordinal DESC LIMIT 1", thre
                 {
                     var kind = status == "completed" ? EvidenceKind.Completed : status == "interrupted" ? EvidenceKind.Stopped : EvidenceKind.Started;
                     var state = status == "completed" ? SessionState.Completed : status == "interrupted" ? SessionState.Stopped : SessionState.Unknown;
-                    var observation = Observation(thread, turnId, kind, state, kind == EvidenceKind.Started ? turnTime : observationTime, kind + ":" + threadId + ":" + turnId);
+                    // Align second-precision turn starts with their millisecond user item without passing real output in this poll.
+                    var startTime = userTime.HasValue && userTime.Value > turnTime ? userTime.Value : turnTime;
+                    var observation = Observation(thread, turnId, kind, state, kind == EvidenceKind.Started ? startTime : observationTime, kind + ":" + threadId + ":" + turnId);
                     observation.IsFresh = true;
                     observation.Reason = status == "completed" ? "观察到新的执行轮次成功完成。" : status == "interrupted" ? "观察到用户停止执行。" : "观察到新的执行轮次；等待实际输出或工具完成以确认执行。";
                     result.Observations.Add(observation);
                 }
             }
-            ReadProgress(history, thread, turnId, status, result);
+            ReadProgress(progress, thread, turnId, status, result);
         }
 
-        private void ReadUserMessage(SqliteDatabase history, AppSettings settings, Dictionary<string, object> thread, string turnId, ReadResult result)
+        private DateTime? ReadUserMessage(SqliteDatabase history, AppSettings settings, Dictionary<string, object> thread, string turnId, ReadResult result)
         {
             var item = history.Query(@"SELECT item_id,item_json,created_at_ms FROM thread_items
 WHERE thread_id=? AND turn_id=? AND item_type='userMessage' ORDER BY rollout_ordinal DESC LIMIT 1", Text(thread, "id"), turnId).FirstOrDefault();
-            if (item == null) return;
+            if (item == null) return null;
             var id = Text(item, "item_id");
             var threadId = Text(thread, "id");
             string previous;
             var changed = !userVersions.TryGetValue(threadId, out previous) || previous != id;
             userVersions[threadId] = id;
             var timestamp = FromMilliseconds(Number(item, "created_at_ms"));
-            if (!baselined || !changed || timestamp < startedUtc || timestamp > utcNow().AddMinutes(1)) return;
+            if (timestamp < startedUtc || timestamp > utcNow().AddMinutes(1)) return null;
+            if (!baselined || !changed) return timestamp;
             var observation = Observation(thread, turnId, EvidenceKind.UserMessage, SessionState.Unknown, timestamp, "user:" + threadId + ":" + id);
             observation.IsFresh = true;
             observation.Reason = "观察到新的用户消息。";
@@ -151,34 +158,66 @@ WHERE thread_id=? AND turn_id=? AND item_type='userMessage' ORDER BY rollout_ord
                 observation.IsContinuationMessage = String.Equals(text, settings.EffectiveMessage(), StringComparison.Ordinal);
             }
             result.Observations.Add(observation);
+            return timestamp;
         }
 
-        private void ReadProgress(SqliteDatabase history, Dictionary<string, object> thread, string turnId, string turnStatus, ReadResult result)
+        private ProgressItem ReadProgressItem(SqliteDatabase history, string threadId, string turnId, DateTime observedUtc, bool inspectRecent, out bool recentExecution)
         {
-            var item = history.Query(@"SELECT item_id,item_type,item_json,created_at_ms,completed_at_ms,updated_at_ordinal
-FROM thread_items WHERE thread_id=? AND turn_id=? AND
-(item_type='agentMessage' OR (item_type IN ('commandExecution','mcpToolCall','dynamicToolCall','fileChange') AND completed_at_ms IS NOT NULL))
-ORDER BY rollout_ordinal DESC LIMIT 1", Text(thread, "id"), turnId).FirstOrDefault();
+            const string candidate = "(item_type='agentMessage' OR (item_type IN ('commandExecution','mcpToolCall','dynamicToolCall','fileChange') AND completed_at_ms IS NOT NULL))";
+            var lowerBound = observedUtc.AddMinutes(-2);
+            recentExecution = false;
+            ProgressItem latest = null;
+            // Keep the original latest candidate for recovery; older recent activity only affects display.
+            var query = @"SELECT item_id,item_type,CASE WHEN item_type='agentMessage' THEN item_json END AS item_json,
+created_at_ms,completed_at_ms,updated_at_ordinal FROM thread_items
+WHERE thread_id=? AND turn_id=? AND " + candidate + @"
+AND (rollout_ordinal=(SELECT rollout_ordinal FROM thread_items WHERE thread_id=? AND turn_id=? AND " + candidate + @" ORDER BY rollout_ordinal DESC LIMIT 1)
+OR MAX(created_at_ms,COALESCE(completed_at_ms,0)) BETWEEN ? AND ?)
+ORDER BY rollout_ordinal DESC";
+            foreach (var row in history.QueryRows(query, threadId, turnId, threadId, turnId,
+                new DateTimeOffset(lowerBound).ToUnixTimeMilliseconds(), new DateTimeOffset(observedUtc).ToUnixTimeMilliseconds()))
+            {
+                var hasExecution = Number(row, "completed_at_ms") > 0;
+                if (Text(row, "item_type") == "agentMessage")
+                {
+                    var document = Parse(Text(row, "item_json"));
+                    hasExecution = document != null && !String.IsNullOrWhiteSpace(Text(document, "text"));
+                }
+                var item = new ProgressItem
+                {
+                    Signature = turnId + ":" + Text(row, "item_id") + ":" + Number(row, "updated_at_ordinal") + ":" + Number(row, "completed_at_ms"),
+                    TimestampUtc = FromMilliseconds(Math.Max(Number(row, "created_at_ms"), Number(row, "completed_at_ms"))),
+                    HasExecution = hasExecution
+                };
+                if (latest == null) latest = item;
+                recentExecution = item.HasExecution && item.TimestampUtc >= lowerBound && item.TimestampUtc <= observedUtc;
+                if (!inspectRecent || recentExecution) break;
+            }
+            return latest;
+        }
+
+        private void ReadProgress(ProgressItem item, Dictionary<string, object> thread, string turnId, string turnStatus, ReadResult result)
+        {
             if (item == null) return;
             var threadId = Text(thread, "id");
-            var signature = turnId + ":" + Text(item, "item_id") + ":" + Number(item, "updated_at_ordinal") + ":" + Number(item, "completed_at_ms");
             string previous;
-            var changed = !progressVersions.TryGetValue(threadId, out previous) || previous != signature;
-            progressVersions[threadId] = signature;
+            var changed = !progressVersions.TryGetValue(threadId, out previous) || previous != item.Signature;
+            progressVersions[threadId] = item.Signature;
             if (!baselined || !changed || turnStatus != "inProgress") return;
-            var timestamp = FromMilliseconds(Math.Max(Number(item, "created_at_ms"), Number(item, "completed_at_ms")));
             // Historical projection repair can change ordinals without live execution.
-            if (timestamp < startedUtc || timestamp > utcNow().AddMinutes(1)) return;
-            if (Text(item, "item_type") == "agentMessage")
-            {
-                var document = Parse(Text(item, "item_json"));
-                if (document == null || String.IsNullOrWhiteSpace(Text(document, "text"))) return;
-            }
+            if (!item.HasExecution || item.TimestampUtc < startedUtc || item.TimestampUtc > utcNow().AddMinutes(1)) return;
             var observation = Observation(thread, turnId, EvidenceKind.Progress, SessionState.Running,
-                timestamp, "progress:" + threadId + ":" + signature);
+                item.TimestampUtc, "progress:" + threadId + ":" + item.Signature);
             observation.IsFresh = true;
             observation.Reason = "观察到新的模型输出或已完成的工具执行。";
             result.Observations.Add(observation);
+        }
+
+        private sealed class ProgressItem
+        {
+            public string Signature { get; set; }
+            public DateTime TimestampUtc { get; set; }
+            public bool HasExecution { get; set; }
         }
 
         private void ClassifyFailure(string value, SessionObservation observation)

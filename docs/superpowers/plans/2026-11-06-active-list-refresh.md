@@ -14,7 +14,7 @@
 - [x] Measure UI snapshot-copy overhead and change it only if evidence warrants.
 - [x] Reuse one UI snapshot for details and coalesce duplicate refresh callbacks; validate clone counts and filter behavior.
 - [x] Run behavioral checks, inspect the executing view and package 0.2.1-preview.
-- [ ] Publish verified artifacts.
+- [x] Publish verified artifacts.
 
 **Validation:** Use isolated databases and synthetic sessions. Do not stop or replace the user's running monitor during verification. Preserve the existing requirement that recovery confirmation needs actual execution evidence.
 
@@ -27,3 +27,5 @@
 **Final checks:** Build has zero warnings/errors and all 10 behavioral suites pass. Packaged-EXE isolated UI verification passes all filter, snapshot, queue and close checks; its 120-session/100-event fixture takes about 163 ms per full view and 0.05 ms per details tick. Empty assistant placeholders cannot hide recent completed tools or model output, including behind 128 placeholders; their fallback snapshots never emit fresh recovery evidence. Streaming SQLite tests verify early termination and statement disposal. Independent review finds no remaining P1/P2. The user's existing process remains running; the full updater process fixture was not repeated because it requires the same application mutex.
 
 **EXE SHA-256:** `8facff4a4ec8e188f94175e51cbc58dcb873b3f8804596939dead9fda3b1ad16`.
+
+**Release:** Published [v0.2.1-preview](https://github.com/tvcmall-dev/codex-auto-continue/releases/tag/v0.2.1-preview) from source commit `f5db4bcc5d0947aa7f79b5140447c9e3ac5c909f`. EXE/ZIP/checksum-list upload digests match local files. The production updater selected this version from 0.2.0-preview and downloaded/validated the tested EXE; the public checksum list has two correctly formatted lines matching both artifacts.

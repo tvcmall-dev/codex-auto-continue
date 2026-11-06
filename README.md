@@ -6,6 +6,8 @@
 
 ## 运行与构建
 
+[下载便携 ZIP](https://github.com/tvcmall-dev/codex-auto-continue/releases/download/v0.1.0-preview/CodexAutoContinue-0.1.0-preview-win-x64.zip) · [单独下载 EXE](https://github.com/tvcmall-dev/codex-auto-continue/releases/download/v0.1.0-preview/CodexAutoContinue.exe) · [版本说明与校验值](https://github.com/tvcmall-dev/codex-auto-continue/releases/tag/v0.1.0-preview)
+
 - Windows 10/11 x64，.NET Framework 4.8。
 - 便携包解压后运行 `CodexAutoContinue.exe`，无需管理员权限。
 - 从源码构建需要 .NET SDK 与 .NET Framework 4.8 Developer Pack，在仓库根目录运行 `./build.ps1`。
